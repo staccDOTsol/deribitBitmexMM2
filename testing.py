@@ -82,16 +82,17 @@ MAX_LAYERS          =  4# max orders to layer the ob with on each side
 MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
 NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
-PCT_LIM_LONG        = 7.6       # % position limit long
-PCT_LIM_SHORT       = 7.5  # % position limit short
-PCT_QTY_BASE        = 20 # pct order qty in bps as pct of acct on each order
-MIN_LOOP_TIME       =   0.1       # Minimum time between loops
+PCT_LIM_LONG        = 17.5/7      # % position limit long
+PCT_LIM_SHORT       = 17.5/7  # % position limit short
+PCT_QTY_BASE        = 50/7 # pct order qty in bps as pct of acct on each order
+MIN_LOOP_TIME       =   0.10       # Minimum time between loops
 RISK_CHARGE_VOL     =   55.5  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
 WAVELEN_MTIME_CHK   = 15        # time in seconds between check for file change
 WAVELEN_OUT         = 15        # time in seconds between output to terminal
-WAVELEN_TS          = 15        # time in seconds between time series update
+WAVELEN_TS          = 15        # time in seconds between output to terminal
+WAVELEN_TS2         = 150        # time in seconds between time series update
 VOL_PRIOR           = 150       # vol estimation starting level in percentage pts
 INDEX_MOD = 0.02 #multiplier on modifer for bitmex XBTUSD / BXBT (index) diff as divisor for quantity, and as a multiplier on riskfac (which increases % difference among order prices in layers)
 POS_MOD = 1 #multiplier on modifier for position difference vs min_order_size as multiplier for quantity
@@ -104,8 +105,8 @@ PCT_LIM_SHORT       *= PCT
 PCT_QTY_BASE        *= BP
 VOL_PRIOR           *= PCT
 
-TP = 0.2
-SL = -0.1
+TP = 0.25
+SL = -0.15
 avgavgpnls = []
 class MarketMaker( object ):
     
@@ -625,13 +626,13 @@ class MarketMaker( object ):
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
 
-                    if 'PERPETUAL' in fut and self.thearb > 1 and positionSize < 0:
-                        qty = qty * len(self.futures)
+                    #if 'PERPETUAL' in fut and self.thearb > 1 and positionSize < 0:
+                        #qty = qty * len(self.futures)
 
-                    elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize < 0:
-                        qty = qty * len(self.futures)
-                    elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize > 0:
-                        qty = qty * len(self.futures)
+                    #elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize < 0:
+                        #qty = qty * len(self.futures)
+                    #elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize > 0:
+                        #qty = qty * len(self.futures)
                     if i < len_bid_ords:    
 
                         
@@ -735,12 +736,12 @@ class MarketMaker( object ):
                     positionSize = 0
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
-                    if 'PERPETUAL' in fut and self.thearb < 1 and positionSize < 0: 
-                        qty = qty * len(self.futures)
-                    elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize < 0:
-                        qty = qty * len(self.futures)
-                    elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize > 0:
-                        qty = qty * len(self.futures)
+                    #if 'PERPETUAL' in fut and self.thearb < 1 and positionSize < 0: 
+                        #qty = qty * len(self.futures)
+                    #elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize < 0:
+                        #qty = qty * len(self.futures)
+                    #elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize > 0:
+                        #qty = qty * len(self.futures)
                     
                     if i < len_ask_ords:
                         
@@ -854,6 +855,7 @@ class MarketMaker( object ):
         self.output_status()
 
         t_ts = t_out = t_loop = t_mtime = datetime.utcnow()
+        t_ts2 = t_out = t_loop = t_mtime = datetime.utcnow()
 
         while True:
             self.avg_pnl_sl_tp()
@@ -930,6 +932,10 @@ class MarketMaker( object ):
             
                 self.update_timeseries()
                 self.update_vols()
+            if ( t_now - t_ts2 ).total_seconds() >= WAVELEN_TS2:
+                t_ts2 = t_now
+                self.client.cancelall()
+
             self.avg_pnl_sl_tp()
             self.place_orders()
             self.avg_pnl_sl_tp()
