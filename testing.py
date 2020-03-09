@@ -682,13 +682,13 @@ class MarketMaker( object ):
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
 
-                    #if 'PERPETUAL' in fut and self.thearb > 1 and positionSize < 0:
-                        #qty = qty * len(self.futures)
+                    if 'PERPETUAL' in fut and self.thearb > 1 and positionSize < 0:
+                        qty = qty * 2#len(self.futures)
 
-                    #elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize < 0:
-                        #qty = qty * len(self.futures)
-                    #elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize > 0:
-                        #qty = qty * len(self.futures)
+                    elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize < 0:
+                        qty = qty * 2#len(self.futures)
+                    elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize > 0:
+                        qty = qty * 2#len(self.futures)
                     if i < len_bid_ords:    
 
                         
@@ -792,12 +792,12 @@ class MarketMaker( object ):
                     positionSize = 0
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
-                    #if 'PERPETUAL' in fut and self.thearb < 1 and positionSize < 0: 
-                        #qty = qty * len(self.futures)
-                    #elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize < 0:
-                        #qty = qty * len(self.futures)
-                    #elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize > 0:
-                        #qty = qty * len(self.futures)
+                    if 'PERPETUAL' in fut and self.thearb < 1 and positionSize < 0: 
+                        qty = qty * 2#len(self.futures)
+                    elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize < 0:
+                        qty = qty * 2#len(self.futures)
+                    elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize > 0:
+                        qty = qty * 2#len(self.futures)
                     
                     if i < len_ask_ords:
                         
