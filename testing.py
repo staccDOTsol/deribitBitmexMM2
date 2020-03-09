@@ -990,7 +990,7 @@ class MarketMaker( object ):
                 self.update_vols()
             if ( t_now - t_ts2 ).total_seconds() >= WAVELEN_TS2:
                 t_ts2 = t_now
-                self.client.cancelall()
+                #self.client.cancelall()
 
             self.avg_pnl_sl_tp()
             self.place_orders()
