@@ -78,15 +78,15 @@ EWMA_WGT_LOOPTIME   = 2.5      # parameter for EWMA looptime estimate
 FORECAST_RETURN_CAP = 100        # cap on returns for vol estimate
 LOG_LEVEL           = logging.INFO
 MIN_ORDER_SIZE      = 10
-MAX_LAYERS          =  4# max orders to layer the ob with on each side
+MAX_LAYERS          =  2# max orders to layer the ob with on each side
 MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
 NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
-PCT_LIM_LONG        = 17.5/7      # % position limit long
-PCT_LIM_SHORT       = 17.5/7  # % position limit short
-PCT_QTY_BASE        = 50/7 # pct order qty in bps as pct of acct on each order
+PCT_LIM_LONG        = 17.5      # % position limit long
+PCT_LIM_SHORT       = 17.5  # % position limit short
+PCT_QTY_BASE        = 50/3.5 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =   0.10       # Minimum time between loops
-RISK_CHARGE_VOL     =   55.5  # vol risk charge in bps per 100 vol
+RISK_CHARGE_VOL     =   25.5  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
 WAVELEN_MTIME_CHK   = 15        # time in seconds between check for file change
@@ -95,7 +95,7 @@ WAVELEN_TS          = 15        # time in seconds between output to terminal
 WAVELEN_TS2         = 150        # time in seconds between time series update
 VOL_PRIOR           = 150       # vol estimation starting level in percentage pts
 INDEX_MOD = 0.02 #multiplier on modifer for bitmex XBTUSD / BXBT (index) diff as divisor for quantity, and as a multiplier on riskfac (which increases % difference among order prices in layers)
-POS_MOD = 1 #multiplier on modifier for position difference vs min_order_size as multiplier for quantity
+POS_MOD = 1#multiplier on modifier for position difference vs min_order_size as multiplier for quantity
 PRICE_MOD = 0.02 # for price == 2, the modifier for the PPO strategy as multiplier for quantity
 
 EWMA_WGT_COV        *= PCT
@@ -105,8 +105,8 @@ PCT_LIM_SHORT       *= PCT
 PCT_QTY_BASE        *= BP
 VOL_PRIOR           *= PCT
 
-TP = 0.25
-SL = -0.15
+TP = 0.15
+SL = -0.06
 avgavgpnls = []
 class MarketMaker( object ):
     
@@ -346,11 +346,66 @@ class MarketMaker( object ):
                 self.diff3 = diff
             if self.diff3 > self.maxMaxDD:
                 print('broke max max dd! sleep 24hr')
+                self.client.cancelall()
+                self.sls = self.sls + 1
+                try:
+                    for p in self.client.positions():
+                        sleep(1)
+                        if 'ETH' in p['instrument']:
+                            size = p['size']
+                        else:
+                            size = p['size']
+                        direction = p['direction']
+                        if direction == 'buy':
+                            size = size
+                            if 'ETH' in p['instrument']:
+                                self.client.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
+                            else:
+                                self.client.sell(  p['instrument'], size, self.get_spot() * 0.9, 'false' )
+
+                        else:
+                            if size < 0:
+                                size = size * -1
+                            if 'ETH' in p['instrument']:
+                                self.client.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
+                            else:
+                                self.client.buy(  p['instrument'], size, self.get_spot() * 1.1, 'false' )
+                    sleep(60 * 11)
+                except Exception as e:
+                    print(e)
                 time.sleep(60 * 60 * 24)
+
                 self.diff3 = 0
                 self.startUsd = self.equity_usd
             if self.diff2 < self.minMaxDD:
                 print('broke min max dd! sleep 24hr')
+                self.client.cancelall()
+                self.sls = self.sls + 1
+                try:
+                    for p in self.client.positions():
+                        sleep(1)
+                        if 'ETH' in p['instrument']:
+                            size = p['size']
+                        else:
+                            size = p['size']
+                        direction = p['direction']
+                        if direction == 'buy':
+                            size = size
+                            if 'ETH' in p['instrument']:
+                                self.client.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
+                            else:
+                                self.client.sell(  p['instrument'], size, self.get_spot() * 0.9, 'false' )
+
+                        else:
+                            if size < 0:
+                                size = size * -1
+                            if 'ETH' in p['instrument']:
+                                self.client.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
+                            else:
+                                self.client.buy(  p['instrument'], size, self.get_spot() * 1.1, 'false' )
+                    sleep(60 * 11)
+                except Exception as e:
+                    print(e)
                 time.sleep(60 * 60 * 24)
                 self.diff2 = 0
                 self.startUsd = self.equity_usd
@@ -453,16 +508,17 @@ class MarketMaker( object ):
             #print( '' )
             for k in self.positions.keys():
 
-                self.multsShort[k] = 1
-                self.multsLong[k] = 1
 
                 if 'sizeEth' in self.positions[k]:
                     key = 'sizeEth'
+                    spot = self.get_eth()
                 else:
                     key = 'sizeBtc'
-                if self.positions[k][key] > 10:
-                    self.multsShort[k] = (self.positions[k][key] / 10) * POS_MOD
-                if self.positions[k][key] < -1 * 10:
+                    spot = self.get_spot()
+                #print(self.positions[k][key])
+                if self.positions[k][key] > 10 /  spot:
+                    self.multsShort[k] = (self.positions[k]['size'] / 10) * POS_MOD
+                if self.positions[k][key] < (-1 * 10) / spot:
                     self.multsLong[k] = (-1 * self.positions[k]['size'] / 10) * POS_MOD
 #Vols           
                 #print(self.multsLong)
@@ -1097,7 +1153,11 @@ class MarketMaker( object ):
                 except Exception as e:
                     print(e)
     def update_status( self ):
-        
+    
+        for k in self.positions.keys():
+
+            self.multsShort[k] = 1
+            self.multsLong[k] = 1
         account = self.client.account()
         spot    = self.get_spot()
 
