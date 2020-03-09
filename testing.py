@@ -84,7 +84,7 @@ NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
 PCT_LIM_LONG        = 17.5      # % position limit long
 PCT_LIM_SHORT       = 17.5  # % position limit short
-PCT_QTY_BASE        = 50/3.5 # pct order qty in bps as pct of acct on each order
+PCT_QTY_BASE        = 40 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =   0.10       # Minimum time between loops
 RISK_CHARGE_VOL     =   25.5  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
@@ -95,7 +95,7 @@ WAVELEN_TS          = 15        # time in seconds between output to terminal
 WAVELEN_TS2         = 150        # time in seconds between time series update
 VOL_PRIOR           = 150       # vol estimation starting level in percentage pts
 INDEX_MOD = 0.02 #multiplier on modifer for bitmex XBTUSD / BXBT (index) diff as divisor for quantity, and as a multiplier on riskfac (which increases % difference among order prices in layers)
-POS_MOD = 1#multiplier on modifier for position difference vs min_order_size as multiplier for quantity
+POS_MOD = 0.5#multiplier on modifier for position difference vs min_order_size as multiplier for quantity
 PRICE_MOD = 0.02 # for price == 2, the modifier for the PPO strategy as multiplier for quantity
 
 EWMA_WGT_COV        *= PCT
@@ -516,10 +516,10 @@ class MarketMaker( object ):
                     key = 'sizeBtc'
                     spot = self.get_spot()
                 #print(self.positions[k][key])
-                if self.positions[k][key] > 10 /  spot:
-                    self.multsShort[k] = (self.positions[k]['size'] / 10) * POS_MOD
-                if self.positions[k][key] < (-1 * 10) / spot:
-                    self.multsLong[k] = (-1 * self.positions[k]['size'] / 10) * POS_MOD
+                if self.positions[k]['size'] > 100:
+                    self.multsShort[k] = (self.positions[k]['size'] / 50) * POS_MOD
+                if self.positions[k]['size'] < (-1 * 100):
+                    self.multsLong[k] = (-1 * self.positions[k]['size'] / 50) * POS_MOD
 #Vols           
                 #print(self.multsLong)
                 #print(self.multsShort)
@@ -1078,8 +1078,7 @@ class MarketMaker( object ):
                 else:
                     pl = p['floatingPl']  / account[ 'equity' ] 
                 direction = p['direction']
-                if direction == 'sell':
-                    pl = pl * -1
+               
 
                 pls.append(pl)
             except:
