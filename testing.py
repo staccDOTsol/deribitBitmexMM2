@@ -497,17 +497,18 @@ class MarketMaker( object ):
                             direction = p['direction']
                             if direction == 'sell':
                                 counter = counter + 1
-                        size = size / counter
-                        for p in self.client.positions():
-                            sleep(1)
+                        if counter > 0:
+                            size = size / counter
+                            for p in self.client.positions():
+                                sleep(1)
 
-                            direction = p['direction']
-                            if direction == 'sell':
-                                size = size
-                                if 'ETH' in p['instrument']:
-                                    self.client.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
-                                else:
-                                    self.client.sell(  p['instrument'], size, self.get_spot() * 0.9, 'false' )
+                                direction = p['direction']
+                                if direction == 'sell':
+                                    size = size
+                                    if 'ETH' in p['instrument']:
+                                        self.client.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
+                                    else:
+                                        self.client.sell(  p['instrument'], size, self.get_spot() * 0.9, 'false' )
 
         else:
             self.wantstomarket = positionSize / 4 * -1
@@ -532,19 +533,20 @@ class MarketMaker( object ):
                             direction = p['direction']
                             if direction == 'buy':
                                 counter = counter + 1
-                        size = size / counter
-                        for p in self.client.positions():
-                            sleep(1)
+                        if counter > 0:
+                            size = size / counter
+                            for p in self.client.positions():
+                                sleep(1)
 
-                            direction = p['direction']
-                            if direction == 'buy':
+                                direction = p['direction']
+                                if direction == 'buy':
 
 
-                                
-                                if 'ETH' in p['instrument']:
-                                    self.client.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
-                                else:
-                                    self.client.buy(  p['instrument'], size, self.get_spot() * 1.1, 'false' )
+                                    
+                                    if 'ETH' in p['instrument']:
+                                        self.client.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
+                                    else:
+                                        self.client.buy(  p['instrument'], size, self.get_spot() * 1.1, 'false' )
                   
         print(' ')
         print('Position total delta: ' + str(positionSize * 10) + '$')
