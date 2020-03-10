@@ -489,7 +489,7 @@ class MarketMaker( object ):
                         
                         self.wantstomarket = 0
                         self.waittilmarket = 6
-                        self.cancelall()
+                        self.client.cancelall()
                         print('waittilmarket 0 or pos/lastpos > 1.33, selling: ' + str(size) + ' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
                         counter = 0
                         for p in self.client.positions():
@@ -524,7 +524,7 @@ class MarketMaker( object ):
                         self.waittilmarket = 6
                         self.marketed = self.marketed + size
                     
-                        self.cancelall()
+                        self.client.cancelall()
                         print('waittilmarket 0 or pos / lastpos < 0.75, buying: ' + str(size)  +' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
                         counter = 0
                         for p in self.client.positions():
