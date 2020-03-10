@@ -727,6 +727,7 @@ class MarketMaker( object ):
 
                 asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
             for i in range( max( nbids, nasks )):
+                sleep(0.5)
                 # BIDS
                 #print('nbids')
                 #print(nbids)
