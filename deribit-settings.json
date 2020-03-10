@@ -2,5 +2,5 @@
 	"price": [0,1,2,3],
 	"volatility": [1,2,3],
 	"quantity": [1,2,3,4],
-"minMaxDD": -10,
+"minMaxDD": -15,
 "maxMaxDD": 100}

@@ -78,15 +78,15 @@ EWMA_WGT_LOOPTIME   = 2.5      # parameter for EWMA looptime estimate
 FORECAST_RETURN_CAP = 100        # cap on returns for vol estimate
 LOG_LEVEL           = logging.INFO
 MIN_ORDER_SIZE      = 10
-MAX_LAYERS          =  2# max orders to layer the ob with on each side
+MAX_LAYERS          =  4# max orders to layer the ob with on each side
 MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
 NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
-PCT_LIM_LONG        = 17.5      # % position limit long
-PCT_LIM_SHORT       = 17.5  # % position limit short
-PCT_QTY_BASE        = 40 # pct order qty in bps as pct of acct on each order
+PCT_LIM_LONG        = 24.5      # % position limit long
+PCT_LIM_SHORT       = 24.5  # % position limit short
+PCT_QTY_BASE        = 45 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =   0.10       # Minimum time between loops
-RISK_CHARGE_VOL     =   25.5  # vol risk charge in bps per 100 vol
+RISK_CHARGE_VOL     =   155.5  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
 WAVELEN_MTIME_CHK   = 15        # time in seconds between check for file change
@@ -95,7 +95,7 @@ WAVELEN_TS          = 15        # time in seconds between output to terminal
 WAVELEN_TS2         = 150        # time in seconds between time series update
 VOL_PRIOR           = 150       # vol estimation starting level in percentage pts
 INDEX_MOD = 0.02 #multiplier on modifer for bitmex XBTUSD / BXBT (index) diff as divisor for quantity, and as a multiplier on riskfac (which increases % difference among order prices in layers)
-POS_MOD = 0.5#multiplier on modifier for position difference vs min_order_size as multiplier for quantity
+POS_MOD = 0.15#multiplier on modifier for position difference vs min_order_size as multiplier for quantity
 PRICE_MOD = 0.02 # for price == 2, the modifier for the PPO strategy as multiplier for quantity
 
 EWMA_WGT_COV        *= PCT
@@ -106,7 +106,7 @@ PCT_QTY_BASE        *= BP
 VOL_PRIOR           *= PCT
 
 TP = 0.15
-SL = -0.06
+SL = -0.045
 avgavgpnls = []
 class MarketMaker( object ):
     
@@ -159,6 +159,11 @@ class MarketMaker( object ):
         self.vols               = OrderedDict()
         self.multsShort = {}
         self.multsLong = {}
+        self.wantstomarket = 0
+        self.marketed = 0
+        self.waittilmarket = 1
+        self.lastposdiff = 1
+        self.posdiff = 1
         self.diff = 1
         with open('deribit-settings.json', 'r') as read_file:
             data = json.load(read_file)
@@ -304,7 +309,7 @@ class MarketMaker( object ):
         self.futures_prv    = cp.deepcopy( self.futures )
         insts               = self.client.getinstruments()
         self.futures        = sort_by_key( { 
-            i[ 'instrumentName' ]: i for i in insts  if ('BTC-' in i['instrumentName'])  and i[ 'kind' ] == 'future'#  
+            i[ 'instrumentName' ]: i for i in insts  if 'BTC-27MAR20' not in i['instrumentName'] and ('BTC-' in i['instrumentName'])  and i[ 'kind' ] == 'future'#  
         } )
         
         for k, v in self.futures.items():
@@ -469,6 +474,71 @@ class MarketMaker( object ):
                 positionPos = positionPos - self.positions[p]['size']
             else:   
                 positionPos = positionPos + self.positions[p]['size']
+        self.lastposdiff = self.posdiff #300
+        self.posdiff = positionPos #400
+        if positionSize > 0:
+            self.wantstomarket = positionSize / 4
+            self.waittilmarket = self.waittilmarket - 1
+            if self.lastposdiff != 1:
+                if self.waittilmarket <= 0 or self.posdiff / self.lastposdiff > 1.33:
+                    size = self.wantstomarket - self.marketed
+                    self.marketed = self.marketed + self.wantstomarket 
+                    
+                    self.wantstomarket = 0
+                    self.waittilmarket = 6
+                    print('waittilmarket 0 or pos/lastpos > 1.33, selling: ' + str(size) + ' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
+                    counter = 0
+                    for p in self.client.positions():
+                        sleep(1)
+                        direction = p['direction']
+                        if direction == 'sell':
+                            counter = counter + 1
+                    size = size / counter
+                    for p in self.client.positions():
+                        sleep(1)
+
+                        direction = p['direction']
+                        if direction == 'sell':
+                            size = size
+                            if 'ETH' in p['instrument']:
+                                self.client.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
+                            else:
+                                self.client.sell(  p['instrument'], size, self.get_spot() * 0.9, 'false' )
+
+        else:
+            self.wantstomarket = positionSize / 4
+            self.waittilmarket = self.waittilmarket - 1
+            #-300
+            #-400\
+            if self.lastposdiff != 1:
+                if self.waittilmarket <= 0 or self.posdiff / self.lastposdiff < 0.75:
+                    size = self.wantstomarket - self.marketed
+                    self.marketed = self.marketed + self.wantstomarket 
+                    
+                    self.wantstomarket = 0
+                    self.waittilmarket = 6
+                    print('waittilmarket 0 or pos / lastpos < 0.75, buying: ' + str(size)  +' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
+                    counter = 0
+                    for p in self.client.positions():
+                        sleep(1)
+                        direction = p['direction']
+                        if direction == 'buy':
+                            counter = counter + 1
+                    size = size / counter
+                    for p in self.client.positions():
+                        sleep(1)
+
+                        direction = p['direction']
+                        if direction == 'buy':
+
+
+                            if size < 0:
+                                size = size * -1
+                            if 'ETH' in p['instrument']:
+                                self.client.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
+                            else:
+                                self.client.buy(  p['instrument'], size, self.get_spot() * 1.1, 'false' )
+                  
         print(' ')
         print('Position total delta: ' + str(positionSize * 10) + '$')
         if positionSize < 0:
@@ -521,8 +591,8 @@ class MarketMaker( object ):
                 if self.positions[k]['size'] < (-1 * 100):
                     self.multsLong[k] = (-1 * self.positions[k]['size'] / 50) * POS_MOD
 #Vols           
-                #print(self.multsLong)
-                #print(self.multsShort)
+            print(self.multsLong)
+            print(self.multsShort)
         
     def place_orders( self ):
 
@@ -682,13 +752,13 @@ class MarketMaker( object ):
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
 
-                    if 'PERPETUAL' in fut and self.thearb > 1 and positionSize < 0:
-                        qty = qty * 2#len(self.futures)
+                    if 'PERPETUAL' in fut and self.thearb > 1 :#and positionSize < 0:
+                        qty = qty * 1.45#len(self.futures)
 
                     elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize < 0:
-                        qty = qty * 2#len(self.futures)
+                        qty = qty * 1.2#len(self.futures)
                     elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize > 0:
-                        qty = qty * 2#len(self.futures)
+                        qty = qty * 1.2#len(self.futures)
                     if i < len_bid_ords:    
 
                         
@@ -699,12 +769,12 @@ class MarketMaker( object ):
                             raise
                         except:
                             try:
-                                if self.arbmult[fut]['arb'] >= 1 and self.positions[fut]['size'] + qty < 0:
+                                if self.arbmult[fut]['arb'] >= 1 and self.positions[fut]['size'] + qty / 2 < 0:
                                     self.client.buy( fut, qty, prc, 'true' )
                                 if self.arbmult[fut]['arb'] <= 1 and 'PERPETUAL' not in fut or self.arbmult[fut]['arb'] > 1 and 'PERPETUAL' in fut:
                                     self.client.buy(  fut, qty, prc, 'true' )
 
-                                if self.positions[fut]['size'] - qty >= 0:
+                                if self.positions[fut]['size'] - qty / 2 >= 0:
                                     self.client.buy( fut, qty, prc, 'true' )
                                 #cancel_oids.append( oid )
                                 #self.logger.warn( 'Edit failed for %s' % oid )
@@ -732,7 +802,7 @@ class MarketMaker( object ):
                             abc = 1
                         try:
                             
-                            if self.arbmult[fut]['arb'] >= 1 and self.positions[fut]['size'] - qty <= 0:
+                            if self.arbmult[fut]['arb'] >= 1 and self.positions[fut]['size'] - qty /  2<= 0:
                                 self.client.buy( fut, qty, prc, 'true' )
 
 
@@ -792,12 +862,12 @@ class MarketMaker( object ):
                     positionSize = 0
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
-                    if 'PERPETUAL' in fut and self.thearb < 1 and positionSize < 0: 
-                        qty = qty * 2#len(self.futures)
+                    if 'PERPETUAL' in fut and self.thearb < 1:# and positionSize < 0: 
+                        qty = qty * 1.45#len(self.futures)
                     elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize < 0:
-                        qty = qty * 2#len(self.futures)
+                        qty = qty * 1.2#len(self.futures)
                     elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize > 0:
-                        qty = qty * 2#len(self.futures)
+                        qty = qty * 1.2#len(self.futures)
                     
                     if i < len_ask_ords:
                         
@@ -809,13 +879,13 @@ class MarketMaker( object ):
                         except:
                             try:
                                 if place_asks and i < nasks:
-                                    if self.arbmult[fut]['arb'] >= 1 and self.positions[fut]['size'] + qty < 0:
+                                    if self.arbmult[fut]['arb'] >= 1 and self.positions[fut]['size'] + qty / 2< 0:
                                         self.client.sell( fut, qty, prc, 'true' )
                                 if self.arbmult[fut]['arb'] <= 1 and 'PERPETUAL' not in fut or self.arbmult[fut]['arb'] > 1 and 'PERPETUAL' in fut:
                                     self.client.sell(  fut, qty, prc, 'true' )
 
                                 if place_bids and i < nbids:
-                                    if self.positions[fut]['size'] + qty < 0:
+                                    if self.positions[fut]['size'] + qty / 2< 0:
                                         self.client.buy( fut, qty, prc, 'true' )
                                 #cancel_oids.append( oid )
                                 #self.logger.warn( 'Sell Edit failed for %s' % oid )
@@ -825,10 +895,10 @@ class MarketMaker( object ):
                                 if 'BTC-PERPETUAL' in str(e):
                                     try:
                                         if place_bids and i < nbids:
-                                            if self.thearb < 1 and 'PERPETUAL' in fut or 'PERPETUAL' in fut and self.positions[fut]['size'] + qty < 0:
+                                            if self.thearb < 1 and 'PERPETUAL' in fut or 'PERPETUAL' in fut and self.positions[fut]['size'] + qty / 2< 0:
                                                 self.client.buy( fut, qty, prc, 'true' )
                                         if place_asks and i < nasks:
-                                            if self.positions[fut]['size'] - qty >= 0:
+                                            if self.positions[fut]['size'] - qty / 2 >= 0:
                                                 self.client.sell( fut, qty, prc, 'true' )
                                     except Exception as e:
                                         print(e)
@@ -853,7 +923,7 @@ class MarketMaker( object ):
                                 self.client.sell( fut, qty, prc, 'true' )
 
 
-                            if self.arbmult[fut]['arb'] <= 1 and self.positions[fut]['size'] + qty >= 0:
+                            if self.arbmult[fut]['arb'] <= 1 and self.positions[fut]['size'] + qty / 2 >= 0:
                                 self.client.sell(  fut, qty, prc, 'true' )
 
                         except (SystemExit, KeyboardInterrupt):
@@ -863,10 +933,10 @@ class MarketMaker( object ):
                                 try:
 
                                     if place_bids and i < nbids:
-                                        if self.thearb < 1 and 'PERPETUAL' in fut or 'PERPETUAL' in fut and self.positions[fut]['size'] + qty < 0:
+                                        if self.thearb < 1 and 'PERPETUAL' in fut or 'PERPETUAL' in fut and self.positions[fut]['size'] + qty / 2< 0:
                                             self.client.buy( fut, qty, prc, 'true' )
                                     if place_asks and i < nasks:
-                                        if  self.positions[fut]['size'] - qty >= 0:
+                                        if  self.positions[fut]['size'] - qty / 2>= 0:
                                             self.client.sell( fut, qty, prc, 'true' )
 
                                 except Exception as e:
