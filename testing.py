@@ -84,7 +84,7 @@ NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
 PCT_LIM_LONG        = 24.5      # % position limit long
 PCT_LIM_SHORT       = 24.5  # % position limit short
-PCT_QTY_BASE        = 45 # pct order qty in bps as pct of acct on each order
+PCT_QTY_BASE        = 85 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =   0.10       # Minimum time between loops
 RISK_CHARGE_VOL     =   155.5  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
@@ -309,7 +309,7 @@ class MarketMaker( object ):
         self.futures_prv    = cp.deepcopy( self.futures )
         insts               = self.client.getinstruments()
         self.futures        = sort_by_key( { 
-            i[ 'instrumentName' ]: i for i in insts  if 'BTC-27MAR20' not in i['instrumentName'] and ('BTC-' in i['instrumentName'])  and i[ 'kind' ] == 'future'#  
+            i[ 'instrumentName' ]: i for i in insts  if '27MAR20' not in i['instrumentName'] and (('BTC-' in i['instrumentName'])  or ('ETH-' in i['instrumentName'])  )and i[ 'kind' ] == 'future'#  
         } )
         
         for k, v in self.futures.items():
@@ -620,8 +620,8 @@ class MarketMaker( object ):
             pos_lim_short   = bal_btc * PCT_LIM_SHORT / len(self.futures)
 
             if 'PERPETUAL' in fut:
-                pos_lim_short = pos_lim_short * (len(self.futures)  - 1)
-                pos_lim_long = pos_lim_long * (len(self.futures) - 1)
+                pos_lim_short = pos_lim_short * (len(self.futures) / 2  - 1)
+                pos_lim_long = pos_lim_long * (len(self.futures) / 2- 1)
             
             expi            = self.futures[ fut ][ 'expi_dt' ]
             ##print(self.futures[ fut ][ 'expi_dt' ])
@@ -661,13 +661,13 @@ class MarketMaker( object ):
              #   nbids  = (nbids + (positionSize * -1)) # 30 / 10 = 3
             #    nbids = min(MAX_LAYERS * 1.5, nbids)
             if 'PERPETUAL' not in fut and float(self.thearb) < 1 and positionSize > 0:
-                nbids  = (nbids + (positionSize)) / len(self.futures)
+                nbids  = (nbids + (positionSize)) / len(self.futures) / 2
                 nbids = min(MAX_LAYERS, nbids)
             if 'PERPETUAL' in fut and self.thearb < 1 and positionSize < 0: 
                 nasks  = (nasks + (positionSize * -1)) 
                 nasks = min(MAX_LAYERS * 1.5, nasks)
             if 'PERPETUAL' not in fut and float(self.thearb) > 1 and positionSize > 0: #4 / 10 = 0.4
-                nasks  = (nasks + (positionSize)) / len(self.futures)
+                nasks  = (nasks + (positionSize)) / len(self.futures) / 2
                 nasks = min(MAX_LAYERS, nasks)
 
             nasks = int (nasks)
@@ -763,7 +763,7 @@ class MarketMaker( object ):
                         positionSize = positionSize + self.positions[p]['size']
 
                     if 'PERPETUAL' in fut and self.thearb > 1 :#and positionSize < 0:
-                        qty = qty * 1.45#len(self.futures)
+                        qty = qty * 1.45#len(self.futures) 
 
                     elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize < 0:
                         qty = qty * 1.2#len(self.futures)
