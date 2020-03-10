@@ -482,62 +482,67 @@ class MarketMaker( object ):
             if self.lastposdiff != 1:
                 if self.waittilmarket <= 0 or self.posdiff / self.lastposdiff > 1.33:
                     size = self.wantstomarket - self.marketed
-                    self.marketed = self.marketed + self.wantstomarket 
                     
-                    self.wantstomarket = 0
-                    self.waittilmarket = 6
-                    print('waittilmarket 0 or pos/lastpos > 1.33, selling: ' + str(size) + ' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
-                    counter = 0
-                    for p in self.client.positions():
-                        sleep(1)
-                        direction = p['direction']
-                        if direction == 'sell':
-                            counter = counter + 1
-                    size = size / counter
-                    for p in self.client.positions():
-                        sleep(1)
+                    if size > 0:
 
-                        direction = p['direction']
-                        if direction == 'sell':
-                            size = size
-                            if 'ETH' in p['instrument']:
-                                self.client.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
-                            else:
-                                self.client.sell(  p['instrument'], size, self.get_spot() * 0.9, 'false' )
+                        self.marketed = self.marketed - size
+                        
+                        self.wantstomarket = 0
+                        self.waittilmarket = 1
+                        print('waittilmarket 0 or pos/lastpos > 1.33, selling: ' + str(size) + ' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
+                        counter = 0
+                        for p in self.client.positions():
+                            sleep(1)
+                            direction = p['direction']
+                            if direction == 'sell':
+                                counter = counter + 1
+                        size = size / counter
+                        for p in self.client.positions():
+                            sleep(1)
+
+                            direction = p['direction']
+                            if direction == 'sell':
+                                size = size
+                                if 'ETH' in p['instrument']:
+                                    self.client.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
+                                else:
+                                    self.client.sell(  p['instrument'], size, self.get_spot() * 0.9, 'false' )
 
         else:
-            self.wantstomarket = positionSize / 4
+            self.wantstomarket = positionSize / 4 * -1
             self.waittilmarket = self.waittilmarket - 1
             #-300
             #-400\
             if self.lastposdiff != 1:
                 if self.waittilmarket <= 0 or self.posdiff / self.lastposdiff < 0.75:
-                    size = self.wantstomarket - self.marketed
-                    self.marketed = self.marketed + self.wantstomarket 
+                    size = self.wantstomarket - self.marketed #12.25 - 16.5
+
                     
-                    self.wantstomarket = 0
-                    self.waittilmarket = 6
-                    print('waittilmarket 0 or pos / lastpos < 0.75, buying: ' + str(size)  +' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
-                    counter = 0
-                    for p in self.client.positions():
-                        sleep(1)
-                        direction = p['direction']
-                        if direction == 'buy':
-                            counter = counter + 1
-                    size = size / counter
-                    for p in self.client.positions():
-                        sleep(1)
+                    if size > 0:
+                        self.wantstomarket = 0
+                        self.waittilmarket = 1
+                        self.marketed = self.marketed + size
+                    
+                        print('waittilmarket 0 or pos / lastpos < 0.75, buying: ' + str(size)  +' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
+                        counter = 0
+                        for p in self.client.positions():
+                            sleep(1)
+                            direction = p['direction']
+                            if direction == 'buy':
+                                counter = counter + 1
+                        size = size / counter
+                        for p in self.client.positions():
+                            sleep(1)
 
-                        direction = p['direction']
-                        if direction == 'buy':
+                            direction = p['direction']
+                            if direction == 'buy':
 
 
-                            if size < 0:
-                                size = size * -1
-                            if 'ETH' in p['instrument']:
-                                self.client.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
-                            else:
-                                self.client.buy(  p['instrument'], size, self.get_spot() * 1.1, 'false' )
+                                
+                                if 'ETH' in p['instrument']:
+                                    self.client.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
+                                else:
+                                    self.client.buy(  p['instrument'], size, self.get_spot() * 1.1, 'false' )
                   
         print(' ')
         print('Position total delta: ' + str(positionSize * 10) + '$')
