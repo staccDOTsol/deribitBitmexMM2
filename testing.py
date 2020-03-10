@@ -481,7 +481,7 @@ class MarketMaker( object ):
             self.waittilmarket = self.waittilmarket - 1
             if self.lastposdiff != 1:
                 if self.waittilmarket <= 0 or self.posdiff / self.lastposdiff > 1.33:
-                    size = self.wantstomarket - self.marketed
+                    size = self.wantstomarket + self.marketed
                     
                     if size > 0:
 
