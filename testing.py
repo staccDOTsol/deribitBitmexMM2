@@ -105,7 +105,7 @@ PCT_LIM_SHORT       *= PCT
 PCT_QTY_BASE        *= BP
 VOL_PRIOR           *= PCT
 
-MAX_SKEW = 500
+MAX_SKEW = 700
 TP = 0.15
 SL = -0.08
 avgavgpnls = []
