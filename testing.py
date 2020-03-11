@@ -78,14 +78,14 @@ EWMA_WGT_LOOPTIME   = 2.5      # parameter for EWMA looptime estimate
 FORECAST_RETURN_CAP = 100        # cap on returns for vol estimate
 LOG_LEVEL           = logging.INFO
 MIN_ORDER_SIZE      = 10
-MAX_LAYERS          =  3# max orders to layer the ob with on each side
+MAX_LAYERS          =  2# max orders to layer the ob with on each side
 MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
 NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
 PCT_LIM_LONG        = 24.5*4/3      # % position limit long
 PCT_LIM_SHORT       = 24.5*4/3 # % position limit short
 PCT_QTY_BASE        = 185 # pct order qty in bps as pct of acct on each order
-MIN_LOOP_TIME       =   0.10       # Minimum time between loops
+MIN_LOOP_TIME       =  10      # Minimum time between loops
 RISK_CHARGE_VOL     =   215.5  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
@@ -106,7 +106,7 @@ PCT_QTY_BASE        *= BP
 VOL_PRIOR           *= PCT
 
 TP = 0.15
-SL = -0.15
+SL = -0.05
 avgavgpnls = []
 class MarketMaker( object ):
     
@@ -430,7 +430,7 @@ class MarketMaker( object ):
         if not self.output:
             return None
         
-        self.update_status()
+        #self.update_status()
         
         now     = datetime.utcnow()
         days    = ( now - self.start_time ).total_seconds() / SECONDS_IN_DAY
@@ -488,7 +488,7 @@ class MarketMaker( object ):
         diffratio = 1
         if ts > 0 and ms > 0:
             ratio = ts / ms
-            diffratio = ratio / 0.25
+            diffratio = ratio / 0.2
             print('ratio: ' + str(ratio) + ' & diffratio: ' + str(diffratio))
         if positionSize > 0:
             if self.marketed > 0:
@@ -514,7 +514,7 @@ class MarketMaker( object ):
 
                             sleep(1)
                             direction = p['direction']
-                            if direction == 'sell':
+                            if direction == 'buy':
                                 counter = counter + 1
                         if counter == 0:
                             counter = counter + 1
@@ -534,7 +534,7 @@ class MarketMaker( object ):
                                 sleep(1)
 
                                 direction = p['direction']
-                                if direction == 'sell':
+                                if direction == 'buy':
                                     sold = True
                                     size = size
                                     if 'ETH' in p['instrument']:
@@ -547,7 +547,7 @@ class MarketMaker( object ):
                                 sleep(1)
 
                                 direction = p['direction']
-                                if direction == 'buy':
+                                if direction == 'sell':
                                     size = size
                                     if 'ETH' in p['instrument']:
                                         self.client.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
@@ -577,7 +577,7 @@ class MarketMaker( object ):
                         for p in self.client.positions():
                             sleep(1)
                             direction = p['direction']
-                            if direction == 'buy':
+                            if direction == 'sell':
                                 counter = counter + 1
                         if counter == 0:
                             counter = counter + 1
@@ -588,7 +588,7 @@ class MarketMaker( object ):
                                 ords        = self.client.getopenorders( p['instrument'] )
                                 #cancel_oids += [ o[ 'orderId' ] for o in ask_ords[ nasks : ]]
                                 for o in ords:
-                                    if o['direction'] == 'sell':
+                                    if o['direction'] == 'buy':
                                         try:
                                             sleep(0.5)
                                             self.client.cancel( o['orderId'] )
@@ -597,7 +597,7 @@ class MarketMaker( object ):
                                 sleep(1)
 
                                 direction = p['direction']
-                                if direction == 'buy':
+                                if direction == 'sell':
 
                                     bought = True
                                     
@@ -655,8 +655,8 @@ class MarketMaker( object ):
                 } for k in self.vols.keys()
                 }, 
                 multiple = 100, title = 'Vols' )
-            #print( '\nMean Loop Time: %s' % round( self.mean_looptime, 2 ))
-            #print( '' )
+            print( '\nMean Loop Time: %s' % round( self.mean_looptime, 2 ))
+            print( '' )
             for k in self.positions.keys():
 
 
@@ -683,7 +683,7 @@ class MarketMaker( object ):
         con_sz  = self.con_size        
         
         for fut in self.futures.keys():
-            self.avg_pnl_sl_tp()
+            #self.avg_pnl_sl_tp()
             account         = self.client.account()
 
             spot            = self.get_spot()
@@ -1066,7 +1066,7 @@ class MarketMaker( object ):
         t_ts2 = t_out = t_loop = t_mtime = datetime.utcnow()
 
         while True:
-            self.avg_pnl_sl_tp()
+            #self.avg_pnl_sl_tp()
             self.get_futures()
             ethlist = []
             btclist = []
@@ -1113,7 +1113,7 @@ class MarketMaker( object ):
             # Volatility
             # 0: none
             # 1: ewma
-            self.avg_pnl_sl_tp()
+            #self.avg_pnl_sl_tp()
             with open('deribit-settings.json', 'r') as read_file:
                 data = json.load(read_file)
 
@@ -1129,7 +1129,7 @@ class MarketMaker( object ):
                 #self.restart()
             
             self.update_positions()
-            self.avg_pnl_sl_tp()
+            #self.avg_pnl_sl_tp()
             t_now   = datetime.utcnow()
             
             # Update time series and vols
@@ -1144,9 +1144,9 @@ class MarketMaker( object ):
                 t_ts2 = t_now
                 #self.client.cancelall()
 
-            self.avg_pnl_sl_tp()
+            #self.avg_pnl_sl_tp()
             self.place_orders()
-            self.avg_pnl_sl_tp()
+            #self.avg_pnl_sl_tp()
             # Display status to terminal
             if self.output:    
                 t_now   = datetime.utcnow()
@@ -1162,7 +1162,7 @@ class MarketMaker( object ):
             
             t_now       = datetime.utcnow()
             looptime    = ( t_now - t_loop ).total_seconds()
-            self.avg_pnl_sl_tp()
+            #self.avg_pnl_sl_tp()
             # Estimate mean looptime
             w1  = EWMA_WGT_LOOPTIME
             w2  = 1.0 - w1
@@ -1177,7 +1177,7 @@ class MarketMaker( object ):
                 time.sleep( sleep_time )
             if self.monitor:
                 time.sleep( WAVELEN_OUT )
-            self.avg_pnl_sl_tp()
+            #self.avg_pnl_sl_tp()
     def cal_average(self, num):
         sum_num = 0
         for t in num:
@@ -1248,24 +1248,32 @@ class MarketMaker( object ):
                 print('TP!')
                 self.client.cancelall()
                 self.tps = self.tps + 1
+                positionSize = 0
+                positionPos = 0
+                for p in self.positions:
+                    positionSize = positionSize + self.positions[p]['size']
+                    if self.positions[p]['size'] < 0:
+                        positionPos = positionPos - self.positions[p]['size']
+                    else:   
+                        positionPos = positionPos + self.positions[p]['size']
+                if positionSize > 0:
+                    selling = True
+                    size = positionSize
+                else:
+                    selling = False
+                    size = positionSize * -1
+                print('size: ' + str(size))
                 try:
                     for p in self.client.positions():
                         sleep(1)
-                        if 'ETH' in p['instrument']:
-                            size = p['size']
-                        else:
-                            size = p['size']
-                        direction = p['direction']
-                        if direction == 'buy':
-                            size = size
+
+                        if selling:
                             if 'ETH' in p['instrument']:
                                 self.client.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
                             else:
                                 self.client.sell(  p['instrument'], size, self.get_spot() * 0.9, 'false' )
 
                         else:
-                            if size < 0:
-                                size = size * -1
                             if 'ETH' in p['instrument']:
                                 self.client.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
                             else:
@@ -1276,35 +1284,49 @@ class MarketMaker( object ):
 
             if avg < SL:
                 print('SL!')
+                self.update_positions()
                 self.client.cancelall()
                 self.sls = self.sls + 1
+                positionSize = 0
+                positionPos = 0
+                for p in self.positions:
+                    positionSize = positionSize + self.positions[p]['size']
+                    print('positionSize: ' + str(positionSize))
+                    if self.positions[p]['size'] < 0:
+                        positionPos = positionPos - self.positions[p]['size']
+                    else:   
+                        positionPos = positionPos + self.positions[p]['size']
+                if positionSize > 0:
+                    selling = True
+                    size = positionSize
+                else:
+                    selling = False
+                    size = positionSize * -1
+                print('positionSize: ' + str(positionSize))
+                size = size / len(self.client.positions())
+                print('size: ' + str(size))
                 try:
                     for p in self.client.positions():
                         sleep(1)
-                        if 'ETH' in p['instrument']:
-                            size = p['size']
-                        else:
-                            size = p['size']
-                        direction = p['direction']
-                        if direction == 'buy':
-                            size = size
+                        if selling:
+
                             if 'ETH' in p['instrument']:
                                 self.client.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
                             else:
                                 self.client.sell(  p['instrument'], size, self.get_spot() * 0.9, 'false' )
 
                         else:
-                            if size < 0:
-                                size = size * -1
+
                             if 'ETH' in p['instrument']:
                                 self.client.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
                             else:
                                 self.client.buy(  p['instrument'], size, self.get_spot() * 1.1, 'false' )
-                    sleep(60 * 11)
+                    sleep(60 * 0.01)
                 except Exception as e:
                     print(e)
-    def update_status( self ):
-    
+    def update_status( self 
+        ):
+        self.avg_pnl_sl_tp()
         for k in self.positions.keys():
 
             self.multsShort[k] = 1
