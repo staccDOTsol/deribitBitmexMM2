@@ -559,7 +559,7 @@ class MarketMaker( object ):
             else:
                 if self.marketed < 0:
                     self.marketed = 0
-                self.wantstomarket = positionSize / 5 * -1
+                self.wantstomarket = positionSize / 10 * -1
                 self.waittilmarket = self.waittilmarket - 1
                 #-300
                 #-400\
