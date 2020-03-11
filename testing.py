@@ -66,8 +66,8 @@ args    = parser.parse_args()
 URL     = 'https://www.deribit.com'#ctrl+h!!!!!
 skews = []
 
-KEY     = '0EfmSIaF'
-SECRET  = 'dNfFAB7ygoWFDveqaS9bG3ElUg1oKb6oUXKqNp9480k'
+KEY     = ''
+SECRET  = ''
 BP                  = 1e-4      # one basis point
 BTC_SYMBOL          = 'btc'
 CONTRACT_SIZE       = 10       # USD
@@ -683,7 +683,7 @@ class MarketMaker( object ):
         con_sz  = self.con_size        
         
         for fut in self.futures.keys():
-            #self.avg_pnl_sl_tp()
+            self.avg_pnl_sl_tp()
             account         = self.client.account()
 
             spot            = self.get_spot()
@@ -1066,7 +1066,7 @@ class MarketMaker( object ):
         t_ts2 = t_out = t_loop = t_mtime = datetime.utcnow()
 
         while True:
-            #self.avg_pnl_sl_tp()
+            self.avg_pnl_sl_tp()
             self.get_futures()
             ethlist = []
             btclist = []
@@ -1113,7 +1113,7 @@ class MarketMaker( object ):
             # Volatility
             # 0: none
             # 1: ewma
-            #self.avg_pnl_sl_tp()
+            self.avg_pnl_sl_tp()
             with open('deribit-settings.json', 'r') as read_file:
                 data = json.load(read_file)
 
@@ -1129,7 +1129,7 @@ class MarketMaker( object ):
                 #self.restart()
             
             self.update_positions()
-            #self.avg_pnl_sl_tp()
+            self.avg_pnl_sl_tp()
             t_now   = datetime.utcnow()
             
             # Update time series and vols
@@ -1144,9 +1144,9 @@ class MarketMaker( object ):
                 t_ts2 = t_now
                 #self.client.cancelall()
 
-            #self.avg_pnl_sl_tp()
+            self.avg_pnl_sl_tp()
             self.place_orders()
-            #self.avg_pnl_sl_tp()
+            self.avg_pnl_sl_tp()
             # Display status to terminal
             if self.output:    
                 t_now   = datetime.utcnow()
@@ -1162,7 +1162,7 @@ class MarketMaker( object ):
             
             t_now       = datetime.utcnow()
             looptime    = ( t_now - t_loop ).total_seconds()
-            #self.avg_pnl_sl_tp()
+            self.avg_pnl_sl_tp()
             # Estimate mean looptime
             w1  = EWMA_WGT_LOOPTIME
             w2  = 1.0 - w1
@@ -1177,7 +1177,7 @@ class MarketMaker( object ):
                 time.sleep( sleep_time )
             if self.monitor:
                 time.sleep( WAVELEN_OUT )
-            #self.avg_pnl_sl_tp()
+            self.avg_pnl_sl_tp()
     def cal_average(self, num):
         sum_num = 0
         for t in num:
