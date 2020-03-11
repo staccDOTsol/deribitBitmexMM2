@@ -700,8 +700,8 @@ class MarketMaker( object ):
                     positionSize = positionSize * 10
                     print('pos size: ' + str(positionSize))
                     if positionSize > 0:
-                        print((qty * MAX_LAYERS) / 2 + positionSize)
-                        if (qty * MAX_LAYERS) / 2 + positionSize > MAX_SKEW:
+                        print((qty * 10 * MAX_LAYERS) / 2 + positionSize)
+                        if (qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW:
                             print('max skew on buy')
                             gogo = False
 
@@ -817,9 +817,10 @@ class MarketMaker( object ):
                     gogo = True
                     positionSize = positionSize * 10
                     print('pos size: ' + str(positionSize))
+                    
                     if positionSize < 0:
-                        print((qty * MAX_LAYERS) / 2 + positionSize * -1)
-                        if (qty * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW:
+                        print((qty * 10 * MAX_LAYERS) / 2 + positionSize * -1)
+                        if (qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW:
                             print('max skew on sell')
                             gogo = False
                     if i < len_ask_ords and gogo == True: 
