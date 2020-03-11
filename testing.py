@@ -697,6 +697,7 @@ class MarketMaker( object ):
                     elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize > 0:
                         qty = qty * 1.2#len(self.futures)
                     gogo = True
+                    positionSize = positionSize * 10
                     print('pos size: ' + str(positionSize))
                     if positionSize > 0:
                         print((qty * MAX_LAYERS) / 2 + positionSize)
