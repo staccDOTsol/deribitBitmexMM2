@@ -82,10 +82,10 @@ MAX_LAYERS          =  2# max orders to layer the ob with on each side
 MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
 NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
-PCT_LIM_LONG        = 45      # % position limit long
-PCT_LIM_SHORT       = 45 # % position limit short
-PCT_QTY_BASE        = 255 # pct order qty in bps as pct of acct on each order
-MIN_LOOP_TIME       =  15      # Minimum time between loops
+PCT_LIM_LONG        = 55      # % position limit long
+PCT_LIM_SHORT       = 55 # % position limit short
+PCT_QTY_BASE        = 365 # pct order qty in bps as pct of acct on each order
+MIN_LOOP_TIME       =  25      # Minimum time between loops
 RISK_CHARGE_VOL     =   145.5  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
@@ -106,7 +106,7 @@ PCT_QTY_BASE        *= BP
 VOL_PRIOR           *= PCT
 
 TP = 0.15
-SL = -0.05
+SL = -0.042
 avgavgpnls = []
 class MarketMaker( object ):
     
@@ -161,7 +161,7 @@ class MarketMaker( object ):
         self.multsLong = {}
         self.wantstomarket = 0
         self.marketed = 0
-        self.waittilmarket = 0
+        self.waittilmarket = 3
         self.lastposdiff = 1
         self.posdiff = 1
         self.diff = 1
@@ -498,7 +498,7 @@ class MarketMaker( object ):
                 self.waittilmarket = self.waittilmarket - 1
                 print('positionSize: ' + str(positionSize))
                 if positionSize > 35:
-                    if self.waittilmarket <= 1 or self.posdiff / self.lastposdiff > 1.25:
+                    if self.waittilmarket <= 0 or self.posdiff / self.lastposdiff > 1.25:
                         size = self.wantstomarket + self.marketed
                         size = size / diffratio
                         print('size: ' + str(size))
@@ -507,7 +507,7 @@ class MarketMaker( object ):
                             #self.marketed = self.marketed - size / 10
                             
                             self.wantstomarket = 0
-                            self.waittilmarket = 0
+                            self.waittilmarket = 3
                             #self.client.cancelall()
                             print('waittilmarket 0 or pos/lastpos > 1.33, selling: ' + str(size) + ' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
                             counter = 0
@@ -558,18 +558,18 @@ class MarketMaker( object ):
             else:
                 if self.marketed < 0:
                     self.marketed = 0
-                self.wantstomarket = positionSize / 10 * -1
+                self.wantstomarket = positionSize / 5 * -1
                 self.waittilmarket = self.waittilmarket - 1
                 #-300
                 #-400\
                 if positionSize < -35:
-                    if self.waittilmarket <= 1 or self.posdiff / self.lastposdiff < 0.80:
+                    if self.waittilmarket <= 0 or self.posdiff / self.lastposdiff < 0.80:
                         size = self.wantstomarket - self.marketed #12.25 - 16.5
                         size = size / diffratio
                         print('size: ' + str(size))
                         if size > 0:
                             self.wantstomarket = 0
-                            self.waittilmarket = 0
+                            self.waittilmarket = 3
                             #self.marketed = self.marketed + size / 10
                         
                             #self.client.cancelall()
@@ -1174,8 +1174,16 @@ class MarketMaker( object ):
             self.mean_looptime = w1 * t1 + w2 * t2
             
             t_loop      = t_now
-            sleep_time  = MIN_LOOP_TIME - looptime
-            if sleep_time > 0:
+            positionSize = 0
+            positionPos = 0
+            for p in self.positions:
+                positionSize = positionSize + self.positions[p]['size']
+                if self.positions[p]['size'] < 0:
+                    positionPos = positionPos - self.positions[p]['size']
+                else:   
+                    positionPos = positionPos + self.positions[p]['size']
+            sleep_time  = MIN_LOOP_TIME - looptime 
+            if sleep_time > 0 and (positionSize < -350 or positionSize > 350):
                 time.sleep( sleep_time )
             if self.monitor:
                 time.sleep( WAVELEN_OUT )
