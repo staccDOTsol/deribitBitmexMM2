@@ -105,7 +105,7 @@ PCT_LIM_SHORT       *= PCT
 PCT_QTY_BASE        *= BP
 VOL_PRIOR           *= PCT
 
-MAX_SKEW = 600
+MAX_SKEW = 1
 TP = 0.15
 SL = -0.08
 avgavgpnls = []
@@ -705,7 +705,7 @@ class MarketMaker( object ):
                             print('max skew on buy')
                             gogo = False
 
-                    if i < len_bid_ords and gogo:    
+                    if i < len_bid_ords and gogo == True:    
 
                         
                         try:
@@ -738,7 +738,7 @@ class MarketMaker( object ):
                                         #cancel_oids.append( oid )
                                         self.logger.warn( 'Bid order failed: %s bid for %s'
                                                 % ( prc, qty ))
-                    else:
+                    elif gogo == True:
                         
                         try:
                             oid = bid_ords[ i ][ 'orderId' ]
@@ -822,7 +822,7 @@ class MarketMaker( object ):
                         if (qty * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW:
                             print('max skew on sell')
                             gogo = False
-                    if i < len_ask_ords and gogo:
+                    if i < len_ask_ords and gogo == True: 
                         
                         try:
                             oid = ask_ords[ i ][ 'orderId' ]
@@ -863,7 +863,7 @@ class MarketMaker( object ):
                                 #cancel_oids.append( oid )
 
 
-                    else:
+                    elif gogo == True:
                         
                         try:
                             oid = ask_ords[ i ][ 'orderId' ]
