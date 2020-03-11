@@ -1333,7 +1333,7 @@ class MarketMaker( object ):
                                 self.client.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
                             else:
                                 self.client.buy(  p['instrument'], size, self.get_spot() * 1.1, 'false' )
-                    sleep(60 * 0.01)
+                    sleep(60 * 0.5)
                 except Exception as e:
                     print(e)
     def update_status( self ):
