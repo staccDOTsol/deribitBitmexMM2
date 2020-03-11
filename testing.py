@@ -66,8 +66,8 @@ args    = parser.parse_args()
 URL     = 'https://www.deribit.com'#ctrl+h!!!!!
 skews = []
 
-KEY     = ''
-SECRET  = ''
+KEY     = '0EfmSIaF'
+SECRET  = 'dNfFAB7ygoWFDveqaS9bG3ElUg1oKb6oUXKqNp9480k'
 BP                  = 1e-4      # one basis point
 BTC_SYMBOL          = 'btc'
 CONTRACT_SIZE       = 10       # USD
@@ -78,13 +78,13 @@ EWMA_WGT_LOOPTIME   = 2.5      # parameter for EWMA looptime estimate
 FORECAST_RETURN_CAP = 100        # cap on returns for vol estimate
 LOG_LEVEL           = logging.INFO
 MIN_ORDER_SIZE      = 10
-MAX_LAYERS          =  3# max orders to layer the ob with on each side
+MAX_LAYERS          =  2# max orders to layer the ob with on each side
 MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
 NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
-PCT_LIM_LONG        = 55      # % position limit long
-PCT_LIM_SHORT       = 55 # % position limit short
-PCT_QTY_BASE        = 85 # pct order qty in bps as pct of acct on each order
+PCT_LIM_LONG        = 15      # % position limit long
+PCT_LIM_SHORT       = 15 # % position limit short
+PCT_QTY_BASE        = 305 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =  0.25      # Minimum time between loops
 RISK_CHARGE_VOL     =   85.5  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
@@ -105,8 +105,9 @@ PCT_LIM_SHORT       *= PCT
 PCT_QTY_BASE        *= BP
 VOL_PRIOR           *= PCT
 
+MAX_SKEW = 200
 TP = 0.15
-SL = -0.062
+SL = -0.08
 avgavgpnls = []
 class MarketMaker( object ):
     
@@ -161,7 +162,7 @@ class MarketMaker( object ):
         self.multsLong = {}
         self.wantstomarket = 0
         self.marketed = 0
-        self.waittilmarket = 0
+        self.waittilmarket = 2
         self.lastposdiff = 1
         self.posdiff = 1
         self.diff = 1
@@ -521,9 +522,9 @@ class MarketMaker( object ):
                     key = 'sizeBtc'
                     spot = self.get_spot()
                 #print(self.positions[k][key])
-                if self.positions[k]['size'] > 100:
+                if self.positions[k]['size'] > 10:
                     self.multsShort[k] = (self.positions[k]['size'] / 50) * POS_MOD
-                if self.positions[k]['size'] < (-1 * 100):
+                if self.positions[k]['size'] < (-1 * 10 ):
                     self.multsLong[k] = (-1 * self.positions[k]['size'] / 50) * POS_MOD
 #Vols           
             print(self.multsLong)
@@ -695,7 +696,13 @@ class MarketMaker( object ):
                         qty = qty * 1.2#len(self.futures)
                     elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize > 0:
                         qty = qty * 1.2#len(self.futures)
-                    if i < len_bid_ords:    
+                    gogo = True
+                    if positionSize > 0:
+                        if (qty * MAX_LAYERS) / 2 + positionSize > MAX_SKEW:
+                            print('max skew on buy')
+                            gogo = False
+
+                    if i < len_bid_ords and gogo:    
 
                         
                         try:
@@ -804,8 +811,12 @@ class MarketMaker( object ):
                         qty = qty * 1.2#len(self.futures)
                     elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize > 0:
                         qty = qty * 1.2#len(self.futures)
-                    
-                    if i < len_ask_ords:
+                    gogo = True
+                    if positionSize < 0:
+                        if (qty * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW:
+                            print('max skew on sell')
+                            gogo = False
+                    if i < len_ask_ords and gogo:
                         
                         try:
                             oid = ask_ords[ i ][ 'orderId' ]
@@ -1027,10 +1038,10 @@ class MarketMaker( object ):
                 if positionSize > 0:
                     if self.marketed > 0:
                         self.marketed = 0
-                    self.wantstomarket = positionSize / 10
+                    self.wantstomarket = positionSize / 12
                     self.waittilmarket = self.waittilmarket - 1
                     print('positionSize: ' + str(positionSize))
-                    if positionSize > 35:
+                    if positionSize > 1:
                         if self.waittilmarket <= 0 or self.posdiff / self.lastposdiff > 1.25:
                             size = self.wantstomarket + self.marketed
                             size = size / diffratio
@@ -1040,7 +1051,7 @@ class MarketMaker( object ):
                                 #self.marketed = self.marketed - size / 10
                                 
                                 self.wantstomarket = 0
-                                self.waittilmarket = 0
+                                self.waittilmarket = 2
                                 #self.client.cancelall()
                                 sleep(5)
                                 print('waittilmarket 0 or pos/lastpos > 1.33, selling: ' + str(size) + ' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
@@ -1092,18 +1103,18 @@ class MarketMaker( object ):
                 else:
                     if self.marketed < 0:
                         self.marketed = 0
-                    self.wantstomarket = positionSize / 10 * -1
+                    self.wantstomarket = positionSize / 12 * -1
                     self.waittilmarket = self.waittilmarket - 1
                     #-300
                     #-400\
-                    if positionSize < -35:
+                    if positionSize < -1:
                         if self.waittilmarket <= 0 or self.posdiff / self.lastposdiff < 0.80:
                             size = self.wantstomarket - self.marketed #12.25 - 16.5
                             size = size / diffratio
                             print('size: ' + str(size))
                             if size > 0:
                                 self.wantstomarket = 0
-                                self.waittilmarket = 0
+                                self.waittilmarket = 2
                                 #self.marketed = self.marketed + size / 10
                             
                                 #self.client.cancelall()
