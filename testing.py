@@ -78,15 +78,15 @@ EWMA_WGT_LOOPTIME   = 2.5      # parameter for EWMA looptime estimate
 FORECAST_RETURN_CAP = 100        # cap on returns for vol estimate
 LOG_LEVEL           = logging.INFO
 MIN_ORDER_SIZE      = 10
-MAX_LAYERS          =  4# max orders to layer the ob with on each side
+MAX_LAYERS          =  3# max orders to layer the ob with on each side
 MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
 NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
-PCT_LIM_LONG        = 24.5      # % position limit long
-PCT_LIM_SHORT       = 24.5  # % position limit short
-PCT_QTY_BASE        = 85 # pct order qty in bps as pct of acct on each order
+PCT_LIM_LONG        = 24.5*4/3      # % position limit long
+PCT_LIM_SHORT       = 24.5*4/3 # % position limit short
+PCT_QTY_BASE        = 185 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =   0.10       # Minimum time between loops
-RISK_CHARGE_VOL     =   155.5  # vol risk charge in bps per 100 vol
+RISK_CHARGE_VOL     =   215.5  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
 WAVELEN_MTIME_CHK   = 15        # time in seconds between check for file change
@@ -106,7 +106,7 @@ PCT_QTY_BASE        *= BP
 VOL_PRIOR           *= PCT
 
 TP = 0.15
-SL = -0.045
+SL = -0.15
 avgavgpnls = []
 class MarketMaker( object ):
     
@@ -161,7 +161,7 @@ class MarketMaker( object ):
         self.multsLong = {}
         self.wantstomarket = 0
         self.marketed = 0
-        self.waittilmarket = 6
+        self.waittilmarket = 0
         self.lastposdiff = 1
         self.posdiff = 1
         self.diff = 1
@@ -309,7 +309,7 @@ class MarketMaker( object ):
         self.futures_prv    = cp.deepcopy( self.futures )
         insts               = self.client.getinstruments()
         self.futures        = sort_by_key( { 
-            i[ 'instrumentName' ]: i for i in insts  if '27MAR20' not in i['instrumentName'] and (('BTC-' in i['instrumentName'])  or ('ETH-' in i['instrumentName'])  )and i[ 'kind' ] == 'future'#  
+            i[ 'instrumentName' ]: i for i in insts  if 'BTC-27MAR20' not in i['instrumentName'] and ('BTC-' in i['instrumentName'])  and i[ 'kind' ] == 'future'#  
         } )
         
         for k, v in self.futures.items():
@@ -476,34 +476,78 @@ class MarketMaker( object ):
                 positionPos = positionPos + self.positions[p]['size']
         self.lastposdiff = self.posdiff #300
         self.posdiff = positionPos #400
+        ts = 0
+        ms = 0
+        for fut in self.futures.keys():
+            trades = self.client.tradehistory(1000, fut)
+            for t in trades:
+                if t['liquidity'] == 'T':
+                    ts = ts + t['amount']
+                else:
+                    ms = ms + t['amount']
+        diffratio = 1
+        if ts > 0 and ms > 0:
+            ratio = ts / ms
+            diffratio = ratio / 0.25
+            print('ratio: ' + str(ratio) + ' & diffratio: ' + str(diffratio))
         if positionSize > 0:
-            self.wantstomarket = positionSize / 4
+            if self.marketed > 0:
+                self.marketed = 0
+            self.wantstomarket = positionSize / 10
             self.waittilmarket = self.waittilmarket - 1
-            if self.lastposdiff != 1:
-                if self.waittilmarket <= 0 or self.posdiff / self.lastposdiff > 1.33:
+            print('positionSize: ' + str(positionSize))
+            if positionSize > 35:
+                if self.waittilmarket <= 1 or self.posdiff / self.lastposdiff > 1.25:
                     size = self.wantstomarket + self.marketed
-                    
+                    size = size / diffratio
+                    print('size: ' + str(size))
                     if size > 0:
 
-                        self.marketed = self.marketed - size
+                        #self.marketed = self.marketed - size / 10
                         
                         self.wantstomarket = 0
-                        self.waittilmarket = 6
-                        self.client.cancelall()
+                        self.waittilmarket = 0
+                        #self.client.cancelall()
                         print('waittilmarket 0 or pos/lastpos > 1.33, selling: ' + str(size) + ' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
                         counter = 0
                         for p in self.client.positions():
+
                             sleep(1)
                             direction = p['direction']
                             if direction == 'sell':
                                 counter = counter + 1
+                        if counter == 0:
+                            counter = counter + 1
+                        sold = False
                         if counter > 0:
+                            size = size / counter
+                            for p in self.client.positions():
+                                ords        = self.client.getopenorders( p['instrument'] )
+                                #cancel_oids += [ o[ 'orderId' ] for o in ask_ords[ nasks : ]]
+                                for o in ords:
+                                    if o['direction'] == 'buy':
+                                        try:
+                                            sleep(0.5)
+                                            self.client.cancel( o['orderId'] )
+                                        except:
+                                            abc = 1
+                                sleep(1)
+
+                                direction = p['direction']
+                                if direction == 'sell':
+                                    sold = True
+                                    size = size
+                                    if 'ETH' in p['instrument']:
+                                        self.client.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
+                                    else:
+                                        self.client.sell(  p['instrument'], size, self.get_spot() * 0.9, 'false' )
+                        if sold == False:
                             size = size / counter
                             for p in self.client.positions():
                                 sleep(1)
 
                                 direction = p['direction']
-                                if direction == 'sell':
+                                if direction == 'buy':
                                     size = size
                                     if 'ETH' in p['instrument']:
                                         self.client.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
@@ -511,21 +555,23 @@ class MarketMaker( object ):
                                         self.client.sell(  p['instrument'], size, self.get_spot() * 0.9, 'false' )
 
         else:
-            self.wantstomarket = positionSize / 4 * -1
+            if self.marketed < 0:
+                self.marketed = 0
+            self.wantstomarket = positionSize / 10 * -1
             self.waittilmarket = self.waittilmarket - 1
             #-300
             #-400\
-            if self.lastposdiff != 1:
-                if self.waittilmarket <= 0 or self.posdiff / self.lastposdiff < 0.75:
+            if positionSize < -35:
+                if self.waittilmarket <= 1 or self.posdiff / self.lastposdiff < 0.80:
                     size = self.wantstomarket - self.marketed #12.25 - 16.5
-
-                    
+                    size = size / diffratio
+                    print('size: ' + str(size))
                     if size > 0:
                         self.wantstomarket = 0
-                        self.waittilmarket = 6
-                        self.marketed = self.marketed + size
+                        self.waittilmarket = 0
+                        #self.marketed = self.marketed + size / 10
                     
-                        self.client.cancelall()
+                        #self.client.cancelall()
                         print('waittilmarket 0 or pos / lastpos < 0.75, buying: ' + str(size)  +' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
                         counter = 0
                         for p in self.client.positions():
@@ -533,7 +579,33 @@ class MarketMaker( object ):
                             direction = p['direction']
                             if direction == 'buy':
                                 counter = counter + 1
+                        if counter == 0:
+                            counter = counter + 1
+                        bought = False
                         if counter > 0:
+                            size = size / counter
+                            for p in self.client.positions():
+                                ords        = self.client.getopenorders( p['instrument'] )
+                                #cancel_oids += [ o[ 'orderId' ] for o in ask_ords[ nasks : ]]
+                                for o in ords:
+                                    if o['direction'] == 'sell':
+                                        try:
+                                            sleep(0.5)
+                                            self.client.cancel( o['orderId'] )
+                                        except:
+                                            abc = 1
+                                sleep(1)
+
+                                direction = p['direction']
+                                if direction == 'buy':
+
+                                    bought = True
+                                    
+                                    if 'ETH' in p['instrument']:
+                                        self.client.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
+                                    else:
+                                        self.client.buy(  p['instrument'], size, self.get_spot() * 1.1, 'false' )
+                        if bought == False:
                             size = size / counter
                             for p in self.client.positions():
                                 sleep(1)
@@ -541,7 +613,7 @@ class MarketMaker( object ):
                                 direction = p['direction']
                                 if direction == 'buy':
 
-
+                                    bought = True
                                     
                                     if 'ETH' in p['instrument']:
                                         self.client.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
@@ -620,8 +692,8 @@ class MarketMaker( object ):
             pos_lim_short   = bal_btc * PCT_LIM_SHORT / len(self.futures)
 
             if 'PERPETUAL' in fut:
-                pos_lim_short = pos_lim_short * (len(self.futures) / 2  - 1)
-                pos_lim_long = pos_lim_long * (len(self.futures) / 2- 1)
+                pos_lim_short = pos_lim_short * (len(self.futures)  - 1)
+                pos_lim_long = pos_lim_long * (len(self.futures)- 1)
             
             expi            = self.futures[ fut ][ 'expi_dt' ]
             ##print(self.futures[ fut ][ 'expi_dt' ])
@@ -661,13 +733,13 @@ class MarketMaker( object ):
              #   nbids  = (nbids + (positionSize * -1)) # 30 / 10 = 3
             #    nbids = min(MAX_LAYERS * 1.5, nbids)
             if 'PERPETUAL' not in fut and float(self.thearb) < 1 and positionSize > 0:
-                nbids  = (nbids + (positionSize)) / len(self.futures) / 2
+                nbids  = (nbids + (positionSize)) / len(self.futures) 
                 nbids = min(MAX_LAYERS, nbids)
             if 'PERPETUAL' in fut and self.thearb < 1 and positionSize < 0: 
                 nasks  = (nasks + (positionSize * -1)) 
                 nasks = min(MAX_LAYERS * 1.5, nasks)
             if 'PERPETUAL' not in fut and float(self.thearb) > 1 and positionSize > 0: #4 / 10 = 0.4
-                nasks  = (nasks + (positionSize)) / len(self.futures) / 2
+                nasks  = (nasks + (positionSize)) / len(self.futures) 
                 nasks = min(MAX_LAYERS, nasks)
 
             nasks = int (nasks)
@@ -762,8 +834,8 @@ class MarketMaker( object ):
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
 
-                    if 'PERPETUAL' in fut and self.thearb > 1 :#and positionSize < 0:
-                        qty = qty * 1.45#len(self.futures) 
+                    if 'PERPETUAL' in fut and self.thearb > 1 and positionSize < 0:
+                        qty = qty * 1.2#len(self.futures) 
 
                     elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize < 0:
                         qty = qty * 1.2#len(self.futures)
@@ -872,8 +944,8 @@ class MarketMaker( object ):
                     positionSize = 0
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
-                    if 'PERPETUAL' in fut and self.thearb < 1:# and positionSize < 0: 
-                        qty = qty * 1.45#len(self.futures)
+                    if 'PERPETUAL' in fut and self.thearb < 1 and positionSize < 0: 
+                        qty = qty * 1.2#len(self.futures)
                     elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize < 0:
                         qty = qty * 1.2#len(self.futures)
                     elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize > 0:
