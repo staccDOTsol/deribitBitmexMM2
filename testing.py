@@ -78,15 +78,15 @@ EWMA_WGT_LOOPTIME   = 2.5      # parameter for EWMA looptime estimate
 FORECAST_RETURN_CAP = 100        # cap on returns for vol estimate
 LOG_LEVEL           = logging.INFO
 MIN_ORDER_SIZE      = 10
-MAX_LAYERS          =  2# max orders to layer the ob with on each side
+MAX_LAYERS          =  3# max orders to layer the ob with on each side
 MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
 NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
 PCT_LIM_LONG        = 55      # % position limit long
 PCT_LIM_SHORT       = 55 # % position limit short
-PCT_QTY_BASE        = 365 # pct order qty in bps as pct of acct on each order
+PCT_QTY_BASE        = 85 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =  25      # Minimum time between loops
-RISK_CHARGE_VOL     =   145.5  # vol risk charge in bps per 100 vol
+RISK_CHARGE_VOL     =   85.5  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
 WAVELEN_MTIME_CHK   = 15        # time in seconds between check for file change
@@ -430,7 +430,7 @@ class MarketMaker( object ):
         if not self.output:
             return None
         
-        #self.update_status()
+        self.update_status()
         
         now     = datetime.utcnow()
         days    = ( now - self.start_time ).total_seconds() / SECONDS_IN_DAY
@@ -1334,16 +1334,16 @@ class MarketMaker( object ):
                     sleep(60 * 0.01)
                 except Exception as e:
                     print(e)
-    def update_status( self 
-        ):
-        self.avg_pnl_sl_tp()
+    def update_status( self ):
+        
         
         account = self.client.account()
         spot    = self.get_spot()
 
         self.equity_btc = account[ 'equity' ]
         self.equity_usd = self.equity_btc * spot
-                
+        print('equity')
+        print(self.equity_btc)
         self.update_positions()
         for k in self.positions.keys():
 
