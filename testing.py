@@ -466,8 +466,7 @@ class MarketMaker( object ):
             } for k in self.positions.keys()
             }, 
             title = 'Positions' )
-        except Exception as e:
-            print(e)
+        
         print(' ')
         print('Position total delta: ' + str(positionSize * 10) + '$')
         if positionSize < 0:
@@ -1149,7 +1148,8 @@ class MarketMaker( object ):
                                                 self.client.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
                                             else:
                                                 self.client.buy(  p['instrument'], size, self.get_spot() * 1.1, 'false' )
-            
+            except Exception as e:
+                print(e)
             self.place_orders()
             self.avg_pnl_sl_tp()
             # Display status to terminal
