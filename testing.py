@@ -66,8 +66,8 @@ args    = parser.parse_args()
 URL     = 'https://www.deribit.com'#ctrl+h!!!!!
 skews = []
 
-KEY     = ''
-SECRET  = ''
+KEY     = '0EfmSIaF'
+SECRET  = 'dNfFAB7ygoWFDveqaS9bG3ElUg1oKb6oUXKqNp9480k'
 BP                  = 1e-4      # one basis point
 BTC_SYMBOL          = 'btc'
 CONTRACT_SIZE       = 10       # USD
