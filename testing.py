@@ -466,7 +466,14 @@ class MarketMaker( object ):
             } for k in self.positions.keys()
             }, 
             title = 'Positions' )
-        
+        positionSize = 0
+        positionPos = 0
+        for p in self.positions:
+            positionSize = positionSize + self.positions[p]['size']
+            if self.positions[p]['size'] < 0:
+                positionPos = positionPos - self.positions[p]['size']
+            else:   
+                positionPos = positionPos + self.positions[p]['size']
         print(' ')
         print('Position total delta: ' + str(positionSize * 10) + '$')
         if positionSize < 0:
@@ -1339,7 +1346,14 @@ class MarketMaker( object ):
                     print(e)
     def update_status( self ):
         
-        
+        positionSize = 0
+        positionPos = 0
+        for p in self.positions:
+            positionSize = positionSize + self.positions[p]['size']
+            if self.positions[p]['size'] < 0:
+                positionPos = positionPos - self.positions[p]['size']
+            else:   
+                positionPos = positionPos + self.positions[p]['size']
         account = self.client.account()
         spot    = self.get_spot()
 
