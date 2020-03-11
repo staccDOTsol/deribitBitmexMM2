@@ -355,7 +355,7 @@ class MarketMaker( object ):
                 self.sls = self.sls + 1
                 try:
                     for p in self.client.positions():
-                        sleep(1)
+                        sleep(0.15)
                         if 'ETH' in p['instrument']:
                             size = p['size']
                         else:
@@ -388,7 +388,7 @@ class MarketMaker( object ):
                 self.sls = self.sls + 1
                 try:
                     for p in self.client.positions():
-                        sleep(1)
+                        sleep(0.15)
                         if 'ETH' in p['instrument']:
                             size = p['size']
                         else:
@@ -490,136 +490,138 @@ class MarketMaker( object ):
             ratio = ts / ms
             diffratio = ratio / 0.2
             print('ratio: ' + str(ratio) + ' & diffratio: ' + str(diffratio))
-        if positionSize > 0:
-            if self.marketed > 0:
-                self.marketed = 0
-            self.wantstomarket = positionSize / 10
-            self.waittilmarket = self.waittilmarket - 1
-            print('positionSize: ' + str(positionSize))
-            if positionSize > 35:
-                if self.waittilmarket <= 1 or self.posdiff / self.lastposdiff > 1.25:
-                    size = self.wantstomarket + self.marketed
-                    size = size / diffratio
-                    print('size: ' + str(size))
-                    if size > 0:
+        try:
+            if positionSize > 0:
+                if self.marketed > 0:
+                    self.marketed = 0
+                self.wantstomarket = positionSize / 10
+                self.waittilmarket = self.waittilmarket - 1
+                print('positionSize: ' + str(positionSize))
+                if positionSize > 35:
+                    if self.waittilmarket <= 1 or self.posdiff / self.lastposdiff > 1.25:
+                        size = self.wantstomarket + self.marketed
+                        size = size / diffratio
+                        print('size: ' + str(size))
+                        if size > 0:
 
-                        #self.marketed = self.marketed - size / 10
+                            #self.marketed = self.marketed - size / 10
+                            
+                            self.wantstomarket = 0
+                            self.waittilmarket = 0
+                            #self.client.cancelall()
+                            print('waittilmarket 0 or pos/lastpos > 1.33, selling: ' + str(size) + ' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
+                            counter = 0
+                            for p in self.client.positions():
+
+                                sleep(0.15)
+                                direction = p['direction']
+                                if direction == 'buy':
+                                    counter = counter + 1
+                            if counter == 0:
+                                counter = counter + 1
+                            sold = False
+                            if counter > 0:
+                                size = size / counter
+                                for p in self.client.positions():
+                                    ords        = self.client.getopenorders( p['instrument'] )
+                                    #cancel_oids += [ o[ 'orderId' ] for o in ask_ords[ nasks : ]]
+                                    for o in ords:
+                                        if o['direction'] == 'sell':
+                                            try:
+                                                sleep(0.1)
+                                                self.client.cancel( o['orderId'] )
+                                            except:
+                                                abc = 1
+                                    sleep(0.15)
+
+                                    direction = p['direction']
+                                    if direction == 'buy':
+                                        sold = True
+                                        size = size
+                                        if 'ETH' in p['instrument']:
+                                            self.client.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
+                                        else:
+                                            self.client.sell(  p['instrument'], size, self.get_spot() * 0.9, 'false' )
+                            if sold == False:
+                                size = size / counter
+                                for p in self.client.positions():
+                                    sleep(0.15)
+
+                                    direction = p['direction']
+                                    if direction == 'sell':
+                                        size = size
+                                        if 'ETH' in p['instrument']:
+                                            self.client.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
+                                        else:
+                                            self.client.sell(  p['instrument'], size, self.get_spot() * 0.9, 'false' )
+
+            else:
+                if self.marketed < 0:
+                    self.marketed = 0
+                self.wantstomarket = positionSize / 10 * -1
+                self.waittilmarket = self.waittilmarket - 1
+                #-300
+                #-400\
+                if positionSize < -35:
+                    if self.waittilmarket <= 1 or self.posdiff / self.lastposdiff < 0.80:
+                        size = self.wantstomarket - self.marketed #12.25 - 16.5
+                        size = size / diffratio
+                        print('size: ' + str(size))
+                        if size > 0:
+                            self.wantstomarket = 0
+                            self.waittilmarket = 0
+                            #self.marketed = self.marketed + size / 10
                         
-                        self.wantstomarket = 0
-                        self.waittilmarket = 0
-                        #self.client.cancelall()
-                        print('waittilmarket 0 or pos/lastpos > 1.33, selling: ' + str(size) + ' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
-                        counter = 0
-                        for p in self.client.positions():
-
-                            sleep(1)
-                            direction = p['direction']
-                            if direction == 'buy':
-                                counter = counter + 1
-                        if counter == 0:
-                            counter = counter + 1
-                        sold = False
-                        if counter > 0:
-                            size = size / counter
+                            #self.client.cancelall()
+                            print('waittilmarket 0 or pos / lastpos < 0.75, buying: ' + str(size)  +' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
+                            counter = 0
                             for p in self.client.positions():
-                                ords        = self.client.getopenorders( p['instrument'] )
-                                #cancel_oids += [ o[ 'orderId' ] for o in ask_ords[ nasks : ]]
-                                for o in ords:
-                                    if o['direction'] == 'sell':
-                                        try:
-                                            sleep(0.5)
-                                            self.client.cancel( o['orderId'] )
-                                        except:
-                                            abc = 1
-                                sleep(1)
-
-                                direction = p['direction']
-                                if direction == 'buy':
-                                    sold = True
-                                    size = size
-                                    if 'ETH' in p['instrument']:
-                                        self.client.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
-                                    else:
-                                        self.client.sell(  p['instrument'], size, self.get_spot() * 0.9, 'false' )
-                        if sold == False:
-                            size = size / counter
-                            for p in self.client.positions():
-                                sleep(1)
-
+                                sleep(0.15)
                                 direction = p['direction']
                                 if direction == 'sell':
-                                    size = size
-                                    if 'ETH' in p['instrument']:
-                                        self.client.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
-                                    else:
-                                        self.client.sell(  p['instrument'], size, self.get_spot() * 0.9, 'false' )
-
-        else:
-            if self.marketed < 0:
-                self.marketed = 0
-            self.wantstomarket = positionSize / 10 * -1
-            self.waittilmarket = self.waittilmarket - 1
-            #-300
-            #-400\
-            if positionSize < -35:
-                if self.waittilmarket <= 1 or self.posdiff / self.lastposdiff < 0.80:
-                    size = self.wantstomarket - self.marketed #12.25 - 16.5
-                    size = size / diffratio
-                    print('size: ' + str(size))
-                    if size > 0:
-                        self.wantstomarket = 0
-                        self.waittilmarket = 0
-                        #self.marketed = self.marketed + size / 10
-                    
-                        #self.client.cancelall()
-                        print('waittilmarket 0 or pos / lastpos < 0.75, buying: ' + str(size)  +' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
-                        counter = 0
-                        for p in self.client.positions():
-                            sleep(1)
-                            direction = p['direction']
-                            if direction == 'sell':
+                                    counter = counter + 1
+                            if counter == 0:
                                 counter = counter + 1
-                        if counter == 0:
-                            counter = counter + 1
-                        bought = False
-                        if counter > 0:
-                            size = size / counter
-                            for p in self.client.positions():
-                                ords        = self.client.getopenorders( p['instrument'] )
-                                #cancel_oids += [ o[ 'orderId' ] for o in ask_ords[ nasks : ]]
-                                for o in ords:
-                                    if o['direction'] == 'buy':
-                                        try:
-                                            sleep(0.5)
-                                            self.client.cancel( o['orderId'] )
-                                        except:
-                                            abc = 1
-                                sleep(1)
+                            bought = False
+                            if counter > 0:
+                                size = size / counter
+                                for p in self.client.positions():
+                                    ords        = self.client.getopenorders( p['instrument'] )
+                                    #cancel_oids += [ o[ 'orderId' ] for o in ask_ords[ nasks : ]]
+                                    for o in ords:
+                                        if o['direction'] == 'buy':
+                                            try:
+                                                sleep(0.1)
+                                                self.client.cancel( o['orderId'] )
+                                            except:
+                                                abc = 1
+                                    sleep(0.15)
 
-                                direction = p['direction']
-                                if direction == 'sell':
+                                    direction = p['direction']
+                                    if direction == 'sell':
 
-                                    bought = True
-                                    
-                                    if 'ETH' in p['instrument']:
-                                        self.client.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
-                                    else:
-                                        self.client.buy(  p['instrument'], size, self.get_spot() * 1.1, 'false' )
-                        if bought == False:
-                            size = size / counter
-                            for p in self.client.positions():
-                                sleep(1)
+                                        bought = True
+                                        
+                                        if 'ETH' in p['instrument']:
+                                            self.client.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
+                                        else:
+                                            self.client.buy(  p['instrument'], size, self.get_spot() * 1.1, 'false' )
+                            if bought == False:
+                                size = size / counter
+                                for p in self.client.positions():
+                                    sleep(0.15)
 
-                                direction = p['direction']
-                                if direction == 'buy':
+                                    direction = p['direction']
+                                    if direction == 'buy':
 
-                                    bought = True
-                                    
-                                    if 'ETH' in p['instrument']:
-                                        self.client.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
-                                    else:
-                                        self.client.buy(  p['instrument'], size, self.get_spot() * 1.1, 'false' )
-                  
+                                        bought = True
+                                        
+                                        if 'ETH' in p['instrument']:
+                                            self.client.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
+                                        else:
+                                            self.client.buy(  p['instrument'], size, self.get_spot() * 1.1, 'false' )
+        except Exception as e:
+            print(e)
         print(' ')
         print('Position total delta: ' + str(positionSize * 10) + '$')
         if positionSize < 0:
@@ -801,7 +803,7 @@ class MarketMaker( object ):
 
                 asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
             for i in range( max( nbids, nasks )):
-                sleep(0.5)
+                sleep(0.1)
                 # BIDS
                 #print('nbids')
                 #print(nbids)
@@ -1265,7 +1267,7 @@ class MarketMaker( object ):
                 print('size: ' + str(size))
                 try:
                     for p in self.client.positions():
-                        sleep(1)
+                        sleep(0.15)
 
                         if selling:
                             if 'ETH' in p['instrument']:
@@ -1307,7 +1309,7 @@ class MarketMaker( object ):
                 print('size: ' + str(size))
                 try:
                     for p in self.client.positions():
-                        sleep(1)
+                        sleep(0.15)
                         if selling:
 
                             if 'ETH' in p['instrument']:
