@@ -82,11 +82,11 @@ MAX_LAYERS          =  2# max orders to layer the ob with on each side
 MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
 NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
-PCT_LIM_LONG        = 24.5*4/3      # % position limit long
-PCT_LIM_SHORT       = 24.5*4/3 # % position limit short
-PCT_QTY_BASE        = 185 # pct order qty in bps as pct of acct on each order
-MIN_LOOP_TIME       =  10      # Minimum time between loops
-RISK_CHARGE_VOL     =   215.5  # vol risk charge in bps per 100 vol
+PCT_LIM_LONG        = 45      # % position limit long
+PCT_LIM_SHORT       = 45 # % position limit short
+PCT_QTY_BASE        = 255 # pct order qty in bps as pct of acct on each order
+MIN_LOOP_TIME       =  15      # Minimum time between loops
+RISK_CHARGE_VOL     =   145.5  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
 WAVELEN_MTIME_CHK   = 15        # time in seconds between check for file change
@@ -525,7 +525,7 @@ class MarketMaker( object ):
                                 ords        = self.client.getopenorders( p['instrument'] )
                                 #cancel_oids += [ o[ 'orderId' ] for o in ask_ords[ nasks : ]]
                                 for o in ords:
-                                    if o['direction'] == 'buy':
+                                    if o['direction'] == 'sell':
                                         try:
                                             sleep(0.5)
                                             self.client.cancel( o['orderId'] )
@@ -655,8 +655,8 @@ class MarketMaker( object ):
                 } for k in self.vols.keys()
                 }, 
                 multiple = 100, title = 'Vols' )
-            print( '\nMean Loop Time: %s' % round( self.mean_looptime, 2 ))
-            print( '' )
+            #print( '\nMean Loop Time: %s' % round( self.mean_looptime, 2 ))
+            #print( '' )
             for k in self.positions.keys():
 
 
