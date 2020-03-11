@@ -85,7 +85,7 @@ PCT                 = 100 * BP  # one percentage point
 PCT_LIM_LONG        = 55      # % position limit long
 PCT_LIM_SHORT       = 55 # % position limit short
 PCT_QTY_BASE        = 85 # pct order qty in bps as pct of acct on each order
-MIN_LOOP_TIME       =  25      # Minimum time between loops
+MIN_LOOP_TIME       =  0.25      # Minimum time between loops
 RISK_CHARGE_VOL     =   85.5  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
@@ -161,7 +161,7 @@ class MarketMaker( object ):
         self.multsLong = {}
         self.wantstomarket = 0
         self.marketed = 0
-        self.waittilmarket = 3
+        self.waittilmarket = 0
         self.lastposdiff = 1
         self.posdiff = 1
         self.diff = 1
@@ -507,8 +507,9 @@ class MarketMaker( object ):
                             #self.marketed = self.marketed - size / 10
                             
                             self.wantstomarket = 0
-                            self.waittilmarket = 3
+                            self.waittilmarket = 0
                             #self.client.cancelall()
+                            sleep(5)
                             print('waittilmarket 0 or pos/lastpos > 1.33, selling: ' + str(size) + ' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
                             counter = 0
                             for p in self.client.positions():
@@ -569,10 +570,11 @@ class MarketMaker( object ):
                         print('size: ' + str(size))
                         if size > 0:
                             self.wantstomarket = 0
-                            self.waittilmarket = 3
+                            self.waittilmarket = 0
                             #self.marketed = self.marketed + size / 10
                         
                             #self.client.cancelall()
+                            sleep(5)
                             print('waittilmarket 0 or pos / lastpos < 0.75, buying: ' + str(size)  +' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
                             counter = 0
                             for p in self.client.positions():
