@@ -1327,10 +1327,7 @@ class MarketMaker( object ):
     def update_status( self 
         ):
         self.avg_pnl_sl_tp()
-        for k in self.positions.keys():
-
-            self.multsShort[k] = 1
-            self.multsLong[k] = 1
+        
         account = self.client.account()
         spot    = self.get_spot()
 
@@ -1338,7 +1335,10 @@ class MarketMaker( object ):
         self.equity_usd = self.equity_btc * spot
                 
         self.update_positions()
-                
+        for k in self.positions.keys():
+
+            self.multsShort[k] = 1
+            self.multsLong[k] = 1
       #  self.deltas = OrderedDict( 
       #      { k: self.positions[ k ][ 'sizeBtc' ] for k in self.futures.keys()}
       #  )
