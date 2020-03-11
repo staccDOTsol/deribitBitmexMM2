@@ -66,8 +66,8 @@ args    = parser.parse_args()
 URL     = 'https://www.deribit.com'#ctrl+h!!!!!
 skews = []
 
-KEY     = '0EfmSIaF'
-SECRET  = 'dNfFAB7ygoWFDveqaS9bG3ElUg1oKb6oUXKqNp9480k'
+KEY     = ''
+SECRET  = ''
 BP                  = 1e-4      # one basis point
 BTC_SYMBOL          = 'btc'
 CONTRACT_SIZE       = 10       # USD
@@ -82,8 +82,8 @@ MAX_LAYERS          =  2# max orders to layer the ob with on each side
 MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
 NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
-PCT_LIM_LONG        = 15      # % position limit long
-PCT_LIM_SHORT       = 15 # % position limit short
+PCT_LIM_LONG        = 65      # % position limit long
+PCT_LIM_SHORT       = 65 # % position limit short
 PCT_QTY_BASE        = 305 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =  0.25      # Minimum time between loops
 RISK_CHARGE_VOL     =   85.5  # vol risk charge in bps per 100 vol
@@ -105,7 +105,7 @@ PCT_LIM_SHORT       *= PCT
 PCT_QTY_BASE        *= BP
 VOL_PRIOR           *= PCT
 
-MAX_SKEW = 200
+MAX_SKEW = 600
 TP = 0.15
 SL = -0.08
 avgavgpnls = []
@@ -697,7 +697,9 @@ class MarketMaker( object ):
                     elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize > 0:
                         qty = qty * 1.2#len(self.futures)
                     gogo = True
+                    print('pos size: ' + str(positionSize))
                     if positionSize > 0:
+                        print((qty * MAX_LAYERS) / 2 + positionSize)
                         if (qty * MAX_LAYERS) / 2 + positionSize > MAX_SKEW:
                             print('max skew on buy')
                             gogo = False
@@ -812,7 +814,10 @@ class MarketMaker( object ):
                     elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize > 0:
                         qty = qty * 1.2#len(self.futures)
                     gogo = True
+                    positionSize = positionSize * 10
+                    print('pos size: ' + str(positionSize))
                     if positionSize < 0:
+                        print((qty * MAX_LAYERS) / 2 + positionSize * -1)
                         if (qty * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW:
                             print('max skew on sell')
                             gogo = False
