@@ -66,10 +66,10 @@ args    = parser.parse_args()
 URL     = 'https://www.deribit.com'#ctrl+h!!!!!
 skews = []
 
-KEY = "iK8orQnY"
-SECRET = "VautqVCoZzqPk065IOG_KzBx07bdS90_gvV2FJyuFSA"
-KEY2     = '0EfmSIaF'
-SECRET2  = 'dNfFAB7ygoWFDveqaS9bG3ElUg1oKb6oUXKqNp9480k'
+KEY = ""
+SECRET = ""
+KEY2     = ''
+SECRET2  = ''
 BP                  = 1e-4      # one basis point
 BTC_SYMBOL          = 'btc'
 CONTRACT_SIZE       = 10       # USD
@@ -107,7 +107,7 @@ PCT_LIM_SHORT       *= PCT
 PCT_QTY_BASE        *= BP
 VOL_PRIOR           *= PCT
 
-MAX_SKEW = 350
+MAX_SKEW = 550
 TP = 0.15
 SL = -0.04
 avgavgpnls = []
@@ -703,7 +703,7 @@ class MarketMaker( object ):
                         qty = qty * 1.2#len(self.futures)
                     gogo = True
                     positionSize = positionSize * 10
-                    print('pos size: ' + str(positionSize))
+                    #print('pos size: ' + str(positionSize))
                     if positionSize > 0:
                         print((qty * 10 * MAX_LAYERS) / 2 + positionSize)
                         if (qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW:
@@ -821,7 +821,7 @@ class MarketMaker( object ):
                         qty = qty * 1.2#len(self.futures)
                     gogo = True
                     positionSize = positionSize * 10
-                    print('pos size: ' + str(positionSize))
+                    #print('pos size: ' + str(positionSize))
                     
                     if positionSize < 0:
                         print((qty * 10 * MAX_LAYERS) / 2 + positionSize * -1)
@@ -1395,9 +1395,8 @@ class MarketMaker( object ):
             else:   
                 positionPos2 = positionPos2 + self.positions2[p]['size']
         usd_short = positionSize2 / 10
-
         if usd_short * -1 != int(self.equity_usd * 10) / 10: #=-100 90  100 90 +10 80 90 -10
-            size = (usd_short * -1 - int(self.equity_usd * 10) / 10) * 10
+            size = (usd_short * -1 - (int(self.equity_usd * 10) / 10) / 10)
             #print('adjust short!')
             self.client2.cancelall()
             selling = False
@@ -1405,9 +1404,10 @@ class MarketMaker( object ):
                 selling = True
                 size = size * -1
             #print('positionSize: ' + str(positionSize2))
-            #print('size: ' + str(size))
+            print('size: ' + str(size))
+            print('usd_short: ' + str(usd_short))
             counter = len(self.futures)
-            size = size / counter
+            #size = size / counter
             if size > 1:
                 print('adjust short!')
                 print('size2: ' + str(size))
@@ -1423,7 +1423,7 @@ class MarketMaker( object ):
 
                         else:
 
-                            if 'ETH' in p['instrument']:
+                            if 'ETH' in p:
                                 self.client2.buy(  p, size, self.get_eth() * 1.1, 'false' )
                             else:
                                 self.client2.buy(  p, size, self.get_spot() * 1.1, 'false' )
