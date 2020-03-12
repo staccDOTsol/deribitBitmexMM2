@@ -83,11 +83,11 @@ MAX_LAYERS          =  2# max orders to layer the ob with on each side
 MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
 NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
-PCT_LIM_LONG        = 5       # % position limit long
-PCT_LIM_SHORT       = 5   # % position limit short
+PCT_LIM_LONG        = 50       # % position limit long
+PCT_LIM_SHORT       = 50   # % position limit short
 PCT_QTY_BASE        = 120 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =   0.1       # Minimum time between loops
-RISK_CHARGE_VOL     =   100  # vol risk charge in bps per 100 vol
+RISK_CHARGE_VOL     =   300  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
 WAVELEN_MTIME_CHK   = 15        # time in seconds between check for file change
@@ -105,6 +105,7 @@ PCT_LIM_SHORT       *= PCT
 PCT_QTY_BASE        *= BP
 VOL_PRIOR           *= PCT
 
+MAX_SKEW = 350
 TP = 0.25
 SL = -0.2
 avgavgpnls = []
@@ -159,6 +160,11 @@ class MarketMaker( object ):
         self.vols               = OrderedDict()
         self.multsShort = {}
         self.multsLong = {}
+        self.wantstomarket = 0
+        self.marketed = 0
+        self.waittilmarket = 0
+        self.lastposdiff = 1
+        self.posdiff = 1
         self.diff = 1
         with open('deribit-settings.json', 'r') as read_file:
             data = json.load(read_file)
@@ -172,6 +178,7 @@ class MarketMaker( object ):
     def create_client( self ):
         self.client = ccxt.bitmex({  'enableRateLimit': True, 'rateLimit': 3000, "apiKey": KEY,
     "secret": SECRET})    
+        #### TESTNET TO WWW
         #print(dir(self.client))  
         #self.client.urls['api'] = self.client.urls['test']
 
@@ -234,7 +241,7 @@ class MarketMaker( object ):
             bids = []
             asks = []
             for o in ob:
-                if o['side'] == 'Sell':
+                if o['side'].lower() == 'sell':
                     bids.append([o['price'], o['size']])
                 else:
                     asks.append([o['price'], o['size']])
@@ -264,6 +271,7 @@ class MarketMaker( object ):
             print({ 'bid': best_bid, 'ask': best_ask })
             best_asks.append(best_ask)
             best_bids.append(best_bid)
+        print(self.price)
         if 1 in self.price:
             dvwap = TA.VWAP(df)
             #print(dvwap)
@@ -308,8 +316,8 @@ class MarketMaker( object ):
         self.futures_prv    = cp.deepcopy( self.futures )
         insts               = self.client.fetchMarkets()
         self.futures        = sort_by_key( { 
-            i[ 'symbol' ]: i for i in insts if 'BTC/USD' in i['symbol'] or (('XBT' in i['symbol'] and '7D' not in i['symbol']) and '.' not in i['symbol']
-        ) } )
+            i[ 'symbol' ]: i for i in insts if 'BTC/USD' in i['symbol'] or (('XBT' in i['symbol'] and '7D' not in i['symbol']) and '.' not in i['symbol'])
+             } )
         self.futures['XBTUSD'] = self.futures['BTC/USD']
         del self.futures['BTC/USD']
         #self.futures['ETHUSD'] = self.futures['ETH/USD']
@@ -437,7 +445,7 @@ class MarketMaker( object ):
             else:   
                 positionPos = positionPos + self.positions[p]['currentQty']
         print(' ')
-        print('Position total delta: ' + str(positionSize * 10) + '$')
+        print('Position total delta: ' + str(positionSize ) + '$')
         if positionSize < 0:
             skews.append(-1)
         else:
@@ -448,7 +456,7 @@ class MarketMaker( object ):
             theskew = theskew + s
             count = count + 1
         print('Skews: ' + str(theskew / count))
-        print('Position exposure: ' + str(positionPos * 10) + '$')
+        print('Position exposure: ' + str(positionPos) + '$')
         total = 0
         maximum = -99999999999999999999
         minimum = 999999999999999999999
@@ -550,6 +558,9 @@ class MarketMaker( object ):
             qtybtc  = max( PCT_QTY_BASE  * bal_btc, min_order_size_btc)
             nbids   = min( math.trunc( pos_lim_long  / qtybtc ), MAX_LAYERS )
             nasks   = min( math.trunc( pos_lim_short / qtybtc ), MAX_LAYERS )
+            print(fut)
+            print('nasks 1: ' + str(nasks))
+            print('nbids 1: ' + str(nbids))
             positionSize = 0
             for p in self.positions:
                 positionSize = positionSize + int(self.positions[p]['currentQty'])
@@ -569,6 +580,9 @@ class MarketMaker( object ):
 
             nasks = int (nasks)
             nbids = int (nbids)
+
+            print('nasks 2: ' + str(nasks))
+            print('nbids 2: ' + str(nbids))
             place_bids = nbids > 0
             place_asks = nasks > 0
             #buy bid sell ask
@@ -601,9 +615,7 @@ class MarketMaker( object ):
             bid_mkt = bbo[ 'bid' ]
             ask_mkt = bbo[ 'ask' ]
             mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
-
             mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
-            
             if contract == 'BTC/USD':
                 ords        = self.ws['XBTUSD'].open_orders('')
             else: 
@@ -617,7 +629,9 @@ class MarketMaker( object ):
                 len_bid_ords    = min( len( bid_ords ), nbids )
                 bid0            = mid_mkt * math.exp( -MKT_IMPACT )
                 bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
-
+                print(bid0)
+                print(bids)
+                print(tsz)
                 bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
                 
             if place_asks:
@@ -666,11 +680,20 @@ class MarketMaker( object ):
                         qty = qty * len(self.futures)
                     elif 'ETHUSD' not in fut and 'BTCUSD' not in fut and self.thearb < 1 and positionSize > 0:
                         qty = qty * len(self.futures)
-                    if i < len_bid_ords:    
+                    gogo = True
+                    print('prc: ' + str())
+                    positionSize = positionSize * 10
+                    print('pos size: ' + str(positionSize))
+                    if positionSize > 0:
+                        print((qty * MAX_LAYERS) / 2 + positionSize)
+                        if (qty * MAX_LAYERS) / 2 + positionSize > MAX_SKEW:
+                            print('max skew on buy')
+                            gogo = False
+                    if i < len_bid_ords and gogo == True:    
 
-                        
+                        oid = bid_ords[ i ]['orderID']
+                        #print(oid)
                         try:
-                            oid = bid_ords[ i ][ 'orderId' ]
                             fut2 = fut
                             if fut is 'XBTUSD':
                                 fut2 = 'BTC/USD'
@@ -679,128 +702,21 @@ class MarketMaker( object ):
                             self.client.editOrder(oid, fut2, "Limit", bid_ords[i]['side'], qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
                         except (SystemExit, KeyboardInterrupt):
                             raise
-                        except:
-                            try:
-                                if self.arbmult[fut]['arb'] >= 1 and self.positions[fut]['currentQty'] + qty < 0:
-                                    fut2 = fut
-                                    perp = False
-                                    if fut is 'XBTUSD':
-                                        fut2 = 'BTC/USD'
-                                        perp = True
-                                    if fut is 'ETHUSD':
-                                        perp = True
-                                        fut2 = 'ETH/USD'
-                                    self.client.createOrder(  fut2, "Limit", 'buy', qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
-                                if self.arbmult[fut]['arb'] <= 1 and not perp or self.arbmult[fut]['arb'] > 1 and perp:
-                                    fut2 = fut
-                                    perp = False
-                                    if fut is 'XBTUSD':
-                                        fut2 = 'BTC/USD'
-                                        perp = True
-                                    if fut is 'ETHUSD':
-                                        perp = True
-                                        fut2 = 'ETH/USD'
-                                    self.client.createOrder(  fut2, "Limit", 'buy', qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
-
-                                if self.positions[fut]['currentQty'] - qty >= 0:
-                                    fut2 = fut
-                                    perp = False
-                                    if fut is 'XBTUSD':
-                                        fut2 = 'BTC/USD'
-                                        perp = True
-                                    if fut is 'ETHUSD':
-                                        perp = True
-                                        fut2 = 'ETH/USD'
-                                    self.client.createOrder(  fut2, "Limit", 'buy', qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
-                                #cancel_oids.append( oid )
-                                #self.logger.warn( 'Edit failed for %s' % oid )
-                            except (SystemExit, KeyboardInterrupt):
-                                raise
-                            except Exception as e:
-                                print(e)
-                                if 'XBTUSD' in str(e) or 'ETHUSD' in str(e):
-                                    try:
-                                        fut2 = fut
-                                        perp = False
-                                        if fut is 'XBTUSD':
-                                            fut2 = 'BTC/USD'
-                                            perp = True
-                                        if fut is 'ETHUSD':
-                                            perp = True
-                                            fut2 = 'ETH/USD'
-                                        if self.thearb <= 1 and not perp or self.thearb > 1 and perp:
-                                            fut2 = fut
-                                            if fut is 'XBTUSD':
-                                                fut2 = 'BTC/USD'
-                                            if fut is 'ETHUSD':
-                                                fut2 = 'ETH/USD'
-                                            self.client.createOrder(  fut2, "Limit", 'buy', qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
-
-                                    except Exception as e:
-                                        print(e)
-                                        #cancel_oids.append( oid )
-                                        self.logger.warn( 'Bid order failed: %s bid for %s'
-                                                % ( prc, qty ))
-                    else:
-                        
+                        except Exception as e:
+                            print(e)
+                    elif gogo == True:
                         try:
-                            oid = bid_ords[ i ][ 'orderId' ]
                             fut2 = fut
                             if fut is 'XBTUSD':
                                 fut2 = 'BTC/USD'
                             if fut is 'ETHUSD':
                                 fut2 = 'ETH/USD'
-                            self.client.editOrder(oid, fut2, "Limit", ask_ords[i]['side'], qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
-                        except Exception as e:
-                            #print(bid_ords)
-                            abc = 1
-                        try:
-                            
-                            if self.arbmult[fut]['arb'] >= 1 and self.positions[fut]['currentQty'] - qty <= 0:
-                                fut2 = fut
-                                if fut is 'XBTUSD':
-                                    fut2 = 'BTC/USD'
-                                if fut is 'ETHUSD':
-                                    fut2 = 'ETH/USD'
-                                self.client.createOrder(  fut2, "Limit", 'buy', qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
-
-
-                            if self.arbmult[fut]['arb'] <= 1:
-                                fut2 = fut
-                                if fut is 'XBTUSD':
-                                    fut2 = 'BTC/USD'
-                                if fut is 'ETHUSD':
-                                    fut2 = 'ETH/USD'
-                                self.client.createOrder(  fut2, "Limit", 'buy', qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
-
-
+                            self.client.createOrder(  fut2, "Limit", 'buy', qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
                         except (SystemExit, KeyboardInterrupt):
                             raise
                         except Exception as e:
-                            if 'XBTUSD' in str(e) or 'ETHUSD' in str(e):
-                                try:
-                                    fut2 = fut
-                                    perp = False
-                                    if fut is 'XBTUSD':
-                                        fut2 = 'BTC/USD'
-                                        perp = True
-                                    if fut is 'ETHUSD':
-                                        perp = True
-                                        fut2 = 'ETH/USD'
-                                    if self.thearb <= 1 and not perp or self.thearb > 1 and  perp:
-                                        fut2 = fut
-                                        perp = False
-                                        if fut is 'XBTUSD':
-                                            fut2 = 'BTC/USD'
-                                            perp = True
-                                        if fut is 'ETHUSD':
-                                            perp = True
-                                            fut2 = 'ETH/USD'
-                                        self.client.createOrder(  fut2, "Limit", 'buy', qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
-                                except Exception as e:
-                                    print(e)
-                                    #cancel_oids.append( oid )
-                                    self.logger.warn( 'Bid order failed: %s bid for %s'
+                            print(e)
+                            self.logger.warn( 'Bid order failed: %s bid for %s'
                                                 % ( prc, qty ))
 
                 # OFFERS
@@ -846,170 +762,45 @@ class MarketMaker( object ):
                         qty = qty * len(self.futures)
                     elif not perp and self.thearb > 1 and positionSize > 0:
                         qty = qty * len(self.futures)
+                    gogo = True
+                    positionSize = positionSize * 10
+                    print('pos size: ' + str(positionSize))
                     
-                    if i < len_ask_ords:
+                    print('prc: ' + str(prc))
+                    if positionSize < 0:
+                        print((qty  * MAX_LAYERS) / 2 + positionSize * -1)
+                        if (qty  * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW:
+                            print('max skew on sell')
+                            gogo = False
+                    if i < len_ask_ords and gogo == True:
                         
+                        oid = ask_ords[ i ]['orderID']
+                        #print(oid)
                         try:
-                            oid = ask_ords[ i ][ 'orderId' ]
                             fut2 = fut
                             if fut is 'XBTUSD':
                                 fut2 = 'BTC/USD'
                             if fut is 'ETHUSD':
                                 fut2 = 'ETH/USD'
                             self.client.editOrder(oid, fut2, "Limit", ask_ords[i]['side'], qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except:
-                            try:
-                                if place_asks and i < nasks:
-                                    if self.arbmult[fut]['arb'] >= 1 and self.positions[fut]['currentQty'] + qty < 0:
-                                        fut2 = fut
-                                        perp = False
-                                        if fut is 'XBTUSD':
-                                            fut2 = 'BTC/USD'
-                                            perp = True
-                                        if fut is 'ETHUSD':
-                                            perp = True
-                                            fut2 = 'ETH/USD'
-                                        self.client.createOrder(  fut2, "Limit", 'sell', qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
-                                if self.arbmult[fut]['arb'] <= 1 and  not perp or self.arbmult[fut]['arb'] > 1 and perp:
-                                    fut2 = fut
-                                    perp = False
-                                    if fut is 'XBTUSD':
-                                        fut2 = 'BTC/USD'
-                                        perp = True
-                                    if fut is 'ETHUSD':
-                                        perp = True
-                                        fut2 = 'ETH/USD'
-                                    self.client.createOrder(  fut2, "Limit", 'sell', qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
-
-                                if place_bids and i < nbids:
-                                    if self.positions[fut]['currentQty'] + qty < 0:
-                                        fut2 = fut
-                                        perp = False
-                                        if fut is 'XBTUSD':
-                                            fut2 = 'BTC/USD'
-                                            perp = True
-                                        if fut is 'ETHUSD':
-                                            perp = True
-                                            fut2 = 'ETH/USD'
-                                        self.client.createOrder(  fut2, "Limit", 'buy', qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
-                                #cancel_oids.append( oid )
-                                #self.logger.warn( 'Sell Edit failed for %s' % oid )
-                            except (SystemExit, KeyboardInterrupt):
-                                raise
-                            except Exception as e:
-                                if 'XBTUSD' in str(e) or 'ETHUSD' in str(e):
-                                    try:
-                                        fut2 = fut
-                                        perp = False
-                                        if fut is 'XBTUSD':
-                                            fut2 = 'BTC/USD'
-                                            perp = True
-                                        if fut is 'ETHUSD':
-                                            perp = True
-                                            fut2 = 'ETH/USD'
-
-                                        if place_bids and i < nbids:
-                                            if self.thearb < 1 and perp or perp and self.positions[fut]['currentQty'] + qty < 0:
-                                                fut2 = fut
-                                                perp = False
-                                                if fut is 'XBTUSD':
-                                                    fut2 = 'BTC/USD'
-                                                    perp = True
-                                                if fut is 'ETHUSD':
-                                                    perp = True
-                                                    fut2 = 'ETH/USD'
-                                                self.client.createOrder(  fut2, "Limit", 'buy', qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
-                                        if place_asks and i < nasks:
-                                            if self.positions[fut]['currentQty'] - qty >= 0:
-                                                fut2 = fut
-                                                perp = False
-                                                if fut is 'XBTUSD':
-                                                    fut2 = 'BTC/USD'
-                                                    perp = True
-                                                if fut is 'ETHUSD':
-                                                    perp = True
-                                                    fut2 = 'ETH/USD'
-                                                self.client.createOrder(  fut2, "Limit", 'sell', qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
-                                    except Exception as e:
-                                        print(e)
-                                       # cancel_oids.append( oid )
-                                
-                                       # self.logger.warn( 'Sell Edit failed for %s' % oid )
-                                        self.logger.warn( 'Offer order failed: %s at %s'
-                                                        % ( qty, prc ))
-                                #cancel_oids.append( oid )
-
-
-                    else:
-                        
-                        try:
-                            oid = ask_ords[ i ][ 'orderId' ]
-                            fut2 = fut
-                            if fut is 'XBTUSD':
-                                fut2 = 'BTC/USD'
-                            if fut is 'ETHUSD':
-                                fut2 = 'ETH/USD'
-                            self.client.editOrder(oid, fut2, "Limit", ask_ords[i]['side'], qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
-                        except:
-                            #print('edit error')
-                            abc = 1
-                        try:
-                            if self.arbmult[fut]['arb'] >= 1:
-                                fut2 = fut
-                                if fut is 'XBTUSD':
-                                    fut2 = 'BTC/USD'
-                                if fut is 'ETHUSD':
-                                    fut2 = 'ETH/USD'
-                                self.client.createOrder(  fut2, "Limit", 'sell', qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
-
-
-                            if self.arbmult[fut]['arb'] <= 1 and self.positions[fut]['currentQty'] + qty >= 0:
-                                fut2 = fut
-                                if fut is 'XBTUSD':
-                                    fut2 = 'BTC/USD'
-                                if fut is 'ETHUSD':
-                                    fut2 = 'ETH/USD'
-                                self.client.createOrder(  fut2, "Limit", 'sell', qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
-
                         except (SystemExit, KeyboardInterrupt):
                             raise
                         except Exception as e:
-                            if 'XBTUSD' in str(e) or 'ETHUSD' in str(e):
-                                try:
-                                    fut2 = fut
-                                    perp = False
-                                    if fut is 'XBTUSD':
-                                        fut2 = 'BTC/USD'
-                                        perp = True
-                                    if fut is 'ETHUSD':
-                                        perp = True
-                                        fut2 = 'ETH/USD'
-                                    if place_bids and i < nbids:
-                                        if self.thearb < 1 and perp or perp and self.positions[fut]['currentQty'] + qty < 0:
-                                            fut2 = fut
-                                            if fut is 'XBTUSD':
-                                                fut2 = 'BTC/USD'
-                                            if fut is 'ETHUSD':
-                                                fut2 = 'ETH/USD'
-                                            self.client.createOrder(  fut2, "Limit", 'buy', qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
-                                    if place_asks and i < nasks:
-                                        if  self.positions[fut]['currentQty'] - qty >= 0:
-                                            fut2 = fut
-                                            if fut is 'XBTUSD':
-                                                fut2 = 'BTC/USD'
-                                            if fut is 'ETHUSD':
-                                                fut2 = 'ETH/USD'
-                                            self.client.createOrder(  fut2, "Limit", 'sell', qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
+                            print(e)
 
-                                except Exception as e:
-                                    print(e)
-                                    #cancel_oids.append( oid )
-                                    self.logger.warn( 'Offer order failed: %s at %s'
+                    elif gogo == True:
+                        try:
+                            fut2 = fut
+                            if fut is 'XBTUSD':
+                                fut2 = 'BTC/USD'
+                            if fut is 'ETHUSD':
+                                fut2 = 'ETH/USD'
+                            self.client.createOrder(  fut2, "Limit", 'sell', qty, prc,{'execInst': 'ParticipateDoNotInitiate'})
+                        except (SystemExit, KeyboardInterrupt):
+                            raise
+                        except Exception as e:
+                            self.logger.warn( 'Offer order failed: %s at %s'
                                                 % ( qty, prc ))
-
-
             #if nbids < len( bid_ords ):
             #    cancel_oids += [ o[ 'orderId' ] for o in bid_ords[ nbids : ]]
             #if nasks < len( ask_ords ):
@@ -1103,7 +894,7 @@ class MarketMaker( object ):
             # 0: none
             # 1: ewma
             self.avg_pnl_sl_tp()
-            with open('deribit-settings.json', 'r') as read_file:
+            with open('bitmex-settings.json', 'r') as read_file:
                 data = json.load(read_file)
 
                 self.maxMaxDD = data['maxMaxDD']
@@ -1141,6 +932,223 @@ class MarketMaker( object ):
                 self.update_timeseries()
                 self.update_vols()
             self.avg_pnl_sl_tp()
+            positionSize = 0
+            positionPos = 0
+            for p in self.positions:
+                positionSize = positionSize + self.positions[p]['currentQty']
+                if self.positions[p]['currentQty'] < 0:
+                    positionPos = positionPos - self.positions[p]['currentQty']
+                else:   
+                    positionPos = positionPos + self.positions[p]['currentQty']
+            self.lastposdiff = self.posdiff #300
+            self.posdiff = positionPos #400
+            ts = 0
+            ms = 0
+
+            for fut in self.futures.keys():
+                fut2 = fut
+                if fut is 'XBTUSD':
+                    fut2 = 'BTC/USD'
+                if fut is 'ETHUSD':
+                    fut2 = 'ETH/USD'
+                trades = self.client.fetch_my_trades (symbol = fut2)
+                for t in trades:
+                    if t['takerOrMaker'] == 'taker':
+                        ts = ts + t['amount']
+                    else:
+                        ms = ms + t['amount']
+            diffratio = 1
+            if ts > 0 and ms > 0:
+                ratio = ts / ms
+                diffratio = ratio / 0.2
+                print('ratio: ' + str(ratio) + ' & diffratio: ' + str(diffratio))
+            if positionSize > 0:
+                if self.marketed > 0:
+                    self.marketed = 0
+                self.wantstomarket = positionSize / 12
+
+                self.waittilmarket = self.waittilmarket - 1
+                print('positionSize: ' + str(positionSize))
+                if positionSize > 1:
+                    if self.waittilmarket <= 0 or self.posdiff / self.lastposdiff > 1.25:
+                        size = self.wantstomarket + self.marketed
+                        size = size / diffratio
+                        print('size: ' + str(size))
+                        if size > 1:
+
+                            #self.marketed = self.marketed - size / 10
+                            
+                            self.wantstomarket = 0
+                            self.waittilmarket = 0
+                            #self.client.cancelall()
+                            sleep(5)
+                            print('waittilmarket 0 or pos/lastpos > 1.33, selling: ' + str(size) + ' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
+                            counter = 0
+                            for p in self.positions:
+
+                                sleep(0.15)
+                                direction = self.positions[p]['currentQty'] 
+                                if direction > 0:
+                                    counter = counter + 1
+                            if counter == 0:
+                                counter = counter + 1
+                            sold = False
+                            if counter > 0:
+                                size = size / counter
+                                size = round(size)
+                                for p in self.positions:
+                                    if p == 'BTC/USD':
+                                        ords        = self.ws['XBTUSD'].open_orders('')
+                                    else: 
+                                        ords        = self.ws[p].open_orders('')
+                                    #cancel_oids += [ o[ 'orderId' ] for o in ask_ords[ nasks : ]]
+                                    for o in ords:
+                                        if o['side'].lower() == 'sell':
+                                            try:
+                                                sleep(0.1)
+                                                self.client.cancel( o['orderId'] )
+                                            except:
+                                                abc = 1
+                                    sleep(0.15)
+
+                                    direction = self.positions[p]['currentQty'] 
+                                    if direction > 0:
+                                        sold = True
+                                        size = size
+                                        tsz = self.get_ticksize( p ) 
+                                        if 'ETH' in positions[p]['instrument']:
+                                            fut2 = fut
+                                            if fut is 'XBTUSD':
+                                                fut2 = 'BTC/USD'
+                                            if fut is 'ETHUSD':
+                                                fut2 = 'ETH/USD'
+                                            self.client.createOrder(  fut2, "Limit", 'sell', size, ticksize_floor(self.get_eth() * 0.9, tsz))
+                                        else:
+                                            fut2 = fut
+                                            if fut is 'XBTUSD':
+                                                fut2 = 'BTC/USD'
+                                            if fut is 'ETHUSD':
+                                                fut2 = 'ETH/USD'
+                                            self.client.createOrder(  fut2, "Limit", 'sell', size, ticksize_floor(self.get_spot() * 0.9, tsz))
+                            if sold == False:
+                                size = size / counter
+                                size = round(size)
+                                for p in self.positions:
+                                    sleep(0.15)
+                                    tsz = self.get_ticksize( p )     
+                                    direction = self.positions[p]['currentQty'] 
+                                    if direction < 0:
+                                        size = size
+                                        if 'ETH' in positions[p]['instrument']:
+                                            fut2 = fut
+                                            if fut is 'XBTUSD':
+                                                fut2 = 'BTC/USD'
+                                            if fut is ' ETHUSD':
+                                                fut2 = 'ETH/USD'
+                                            self.client.createOrder(  fut2, "Limit", 'sell', size, ticksize_floor(self.get_eth() * 0.9, tsz))
+                                        else:
+                                            fut2 = fut
+                                            if fut is 'XBTUSD':
+                                                fut2 = 'BTC/USD'
+                                            if fut is 'ETHUSD':
+                                                fut2 = 'ETH/USD'
+                                            self.client.createOrder(  fut2, "Limit", 'sell', size, ticksize_floor(self.get_spot() * 0.9, tsz))
+
+            else:
+                if self.marketed < 0:
+                    self.marketed = 0
+                self.wantstomarket = positionSize / 12 * -1
+                self.waittilmarket = self.waittilmarket - 1
+                #-300
+                #-400\
+                if positionSize < -1:
+                    if self.waittilmarket <= 0 or self.posdiff / self.lastposdiff < 0.80:
+                        size = self.wantstomarket - self.marketed #12.25 - 16.5
+                        size = size / diffratio
+                        print('size: ' + str(size))
+                        if size > 1:
+                            self.wantstomarket = 0
+                            self.waittilmarket = 0
+                            #self.marketed = self.marketed + size / 10
+                        
+                            #self.client.cancelall()
+                            sleep(5)
+                            print('waittilmarket 0 or pos / lastpos < 0.75, buying: ' + str(size)  +' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
+                            counter = 0
+                            for p in self.positions:
+                                sleep(0.15)
+                                if self.positions[p]['currentQty'] < 0:
+                                    counter = counter + 1
+                            if counter == 0:
+                                counter = counter + 1
+                            bought = False
+                            if counter > 0:
+                                size = size / counter
+                                size = round(size)
+                                for p in self.positions:
+                                    if p == 'BTC/USD':
+                                        ords        = self.ws['XBTUSD'].open_orders('')
+                                    else: 
+                                        ords        = self.ws[p].open_orders('')
+                                    #cancel_oids += [ o[ 'orderId' ] for o in ask_ords[ nasks : ]]
+                                    for o in ords:
+                                        if o['side'].lower() == 'buy':
+                                            try:
+                                                sleep(0.1)
+                                                self.client.cancel( o['orderId'] )
+                                            except:
+                                                abc = 1
+                                    sleep(0.15)
+
+                                    direction = self.positions[p]['currentQty'] 
+                                    if direction < 0:
+
+                                        tsz = self.get_ticksize( p )
+                                        bought = True
+                                        
+                                        if 'ETH' in p:
+                                            fut2 = fut
+                                            if fut is 'XBTUSD':
+                                                fut2 = 'BTC/USD'
+                                            if fut is 'ETHUSD':
+                                                fut2 = 'ETH/USD'
+                                            self.client.createOrder(  fut2, "Limit", 'buy', size, ticksize_floor(self.get_eth() * 1.1, tsz))
+                                        else:
+                                            fut2 = fut
+                                            if fut is 'XBTUSD':
+                                                fut2 = 'BTC/USD'
+                                            if fut is 'ETHUSD':
+                                                fut2 = 'ETH/USD'
+                                            self.client.createOrder(  fut2, "Limit", 'buy', size, ticksize_floor(self.get_spot() * 1.1, tsz))
+                            
+                            if bought == False:
+                                size = size / counter
+                                size = round(size)
+                                for p in self.positions:
+                                    sleep(0.15)
+
+                                    direction = self.positions[p]['currentQty'] 
+                                    if direction > 0 :
+
+                                        tsz = self.get_ticksize( p )
+                                        bought = True
+                                        
+                                        if 'ETH' in p:
+                                            fut2 = fut
+                                            if fut is 'XBTUSD':
+                                                fut2 = 'BTC/USD'
+                                            if fut is 'ETHUSD':
+                                                fut2 = 'ETH/USD'
+                                            self.client.createOrder(  fut2, "Limit", 'buy', size, ticksize_floor(self.get_eth() * 1.1, tsz))
+                                        else:
+                                            fut2 = fut
+                                            if fut is 'XBTUSD':
+                                                fut2 = 'BTC/USD'
+                                            if fut is 'ETHUSD':
+                                                fut2 = 'ETH/USD'
+                                            self.client.createOrder(  fut2, "Limit", 'buy', size, ticksize_floor(self.get_spot() * 1.1, tsz))
+                            
+
             self.place_orders()
             self.avg_pnl_sl_tp()
             # Display status to terminal
@@ -1209,7 +1217,7 @@ class MarketMaker( object ):
                 k = 'XBTUSD'
             if k == 'ETH/USD':
                 k = 'ETHUSD'
-            self.ws[k] = (BitMEXWebsocket(endpoint="https://testnet.bitmex.com/api/v1", symbol=k, api_key=KEY, api_secret=SECRET))
+            self.ws[k] = (BitMEXWebsocket(endpoint="https://www.bitmex.com/api/v1", symbol=k, api_key=KEY, api_secret=SECRET))
             self.ohlcv[k] = self.client.fetchOHLCV(fut2, '1m', self.client.parse8601 (thetime))
 
             self.bbw[k] = 0
@@ -1252,7 +1260,7 @@ class MarketMaker( object ):
                 else:
                     pl = p['floatingPl']  / p['currentQty'] * 100
                 direction = p['side']
-                if direction == 'Sell':
+                if direction.lower() == 'sell':
                     pl = pl * -1   
 
                 pls.append(pl)
@@ -1272,30 +1280,34 @@ class MarketMaker( object ):
                 self.tps = self.tps + 1
                 try:
                     for p in positions:
-                        sleep(1)
+                        sleep(2)
                         if 'ETH' in p['instrument']:
                             size = p['currentQty']
                         else:
                             size = p['currentQty']
                         direction = p['side']
-                        if direction == 'Buy':
+                        if direction.lower() == 'Buy':
                             size = size
+
+                            tsz = self.get_ticksize( p['instrument'] )
                             if 'ETH' in p['instrument']:
                                 fut2 = fut
                                 if fut is 'XBTUSD':
                                     fut2 = 'BTC/USD'
                                 if fut is 'ETHUSD':
                                     fut2 = 'ETH/USD'
-                                self.client.createOrder(  fut2, "Limit", 'sell', qty, self.get_eth() * 0.9)
+                                self.client.createOrder(  fut2, "Limit", 'sell', qty, ticksize_floor(self.get_eth() * 0.9, tsz))
                             else:
                                 fut2 = fut
                                 if fut is 'XBTUSD':
                                     fut2 = 'BTC/USD'
                                 if fut is 'ETHUSD':
                                     fut2 = 'ETH/USD'
-                                self.client.createOrder(  fut2, "Limit", 'sell', qty, self.get_spot() * 0.9)
+                                self.client.createOrder(  fut2, "Limit", 'sell', qty, ticksize_floor(self.get_spot() * 0.9, tsz))
 
                         else:
+
+                            tsz = self.get_ticksize( p['instrument'] )
                             if size < 0:
                                 size = size * -1
                             if 'ETH' in p['instrument']:
@@ -1304,29 +1316,48 @@ class MarketMaker( object ):
                                     fut2 = 'BTC/USD'
                                 if fut is 'ETHUSD':
                                     fut2 = 'ETH/USD'
-                                self.client.createOrder(  fut2, "Limit", 'buy', qty, self.get_eth() * 1.1)
+                                self.client.createOrder(  fut2, "Limit", 'buy', qty, ticksize_floor(self.get_eth() * 1.1, tsz))
                             else:
                                 fut2 = fut
                                 if fut is 'XBTUSD':
                                     fut2 = 'BTC/USD'
                                 if fut is 'ETHUSD':
                                     fut2 = 'ETH/USD'
-                                self.client.createOrder(  fut2, "Limit", 'buy', qty, self.get_spot() * 1.1)
+                                self.client.createOrder(  fut2, "Limit", 'buy', qty, ticksize_floor(self.get_spot() * 1.1, tsz))
                 except:
                     abc = 1
-
+            positionSize = 0
+            positionPos = 0
+            for p in self.positions:
+                positionSize = positionSize + self.positions[p]['currentQty']
+                if self.positions[p]['currentQty'] < 0:
+                    positionPos = positionPos - self.positions[p]['currentQty']
+                else:   
+                    positionPos = positionPos + self.positions[p]['currentQty']
             if avg < SL:
                 print('SL!')
+                self.update_positions()
+                self.cancelall()
                 self.sls = self.sls + 1
+                positionSize = 0
+                positionPos = 0
+                
+                if positionSize > 0:
+                    selling = True
+                    size = positionSize
+                else:
+                    selling = False
+                    size = positionSize * -1
+                print('positionSize: ' + str(positionSize))
+                size = size / len(self.positions)
+                print('size: ' + str(size))
                 try:
                     for p in positions:
-                        sleep(1)
-                        if 'ETH' in p['instrument']:
-                            size = p['currentQty']
-                        else:
-                            size = p['currentQty']
+                        sleep(2)
+                        
                         direction = p['side']
-                        if direction == 'Buy':
+                        tsz = self.get_ticksize( p['instrument'] )
+                        if direction.lower() == 'Buy':
                             size = size
                             if 'ETH' in p['instrument']:
                                 fut2 = fut
@@ -1334,14 +1365,14 @@ class MarketMaker( object ):
                                     fut2 = 'BTC/USD'
                                 if fut is 'ETHUSD':
                                     fut2 = 'ETH/USD'
-                                self.client.createOrder(  fut2, "Limit", 'sell', qty, self.get_eth() * 0.9)
+                                self.client.createOrder(  fut2, "Limit", 'sell', qty, ticksize_floor(self.get_eth() * 0.9, tsz))
                             else:
                                 fut2 = fut
                                 if fut is 'XBTUSD':
                                     fut2 = 'BTC/USD'
                                 if fut is 'ETHUSD':
                                     fut2 = 'ETH/USD'
-                                self.client.createOrder(  fut2, "Limit", 'sell', qty, self.get_spot() * 0.9)
+                                self.client.createOrder(  fut2, "Limit", 'sell', qty, ticksize_floor(self.get_spot() * 0.9, tsz))
 
                         else:
                             if size < 0:
@@ -1352,14 +1383,14 @@ class MarketMaker( object ):
                                     fut2 = 'BTC/USD'
                                 if fut is 'ETHUSD':
                                     fut2 = 'ETH/USD'
-                                self.client.createOrder(  fut2, "Limit", 'buy', qty, self.get_eth() * 1.1)
+                                self.client.createOrder(  fut2, "Limit", 'buy', qty, ticksize_floor(self.get_eth() * 1.1, tsz))
                             else:
                                 fut2 = fut
                                 if fut is 'XBTUSD':
                                     fut2 = 'BTC/USD'
                                 if fut is 'ETHUSD':
                                     fut2 = 'ETH/USD'
-                                self.client.createOrder(  fut2, "Limit", 'buy', qty, self.get_spot() * 1.1)
+                                self.client.createOrder(  fut2, "Limit", 'buy', qty, ticksize_floor(self.get_spot() * 1.1, tsz))
                 except Exception as e:
                     print(e)
     def update_status( self ):
@@ -1382,7 +1413,7 @@ class MarketMaker( object ):
     def update_positions( self ):
 
         self.positions  = OrderedDict( { f: {
-            'size':         0,
+            'currentQty':         0,
             'amount':      0,
             'indexPrice':   None,
             'markPrice':    None
@@ -1460,19 +1491,18 @@ class MarketMaker( object ):
             v   = w * v + ( 1 - w ) * self.vols[ s ] ** 2
             self.vols[ s ] = math.sqrt( v )
                        
-mmbot =  MarketMaker( monitor = args.monitor, output = args.output )
-mmbot.run()
-#if __name__ == '__main__':
+
+if __name__ == '__main__':
     
- #   try:
- #       mmbot = MarketMaker( monitor = args.monitor, output = args.output )
- #       mmbot.run()
- #   except( KeyboardInterrupt, SystemExit ):
-        #print( "Cancelling open orders" )
- #       mmbot.cancelall()
- #       sys.exit()
- #   except Exception as e:
- #       print(e)
- #       if args.restart:
-  #          mmbot.restart()
+     try:
+         mmbot = MarketMaker( monitor = args.monitor, output = args.output )
+         mmbot.run()
+     except( KeyboardInterrupt, SystemExit ):
+         print( "Cancelling open orders" )
+         mmbot.cancelall()
+         sys.exit()
+     except Exception as e:
+         print(e)
+         if args.restart:
+             mmbot.restart()
         

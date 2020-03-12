@@ -66,6 +66,8 @@ args    = parser.parse_args()
 URL     = 'https://www.deribit.com'#ctrl+h!!!!!
 skews = []
 
+KEY2 = ""
+SECRET2 = ""
 KEY     = ''
 SECRET  = ''
 BP                  = 1e-4      # one basis point
@@ -84,7 +86,7 @@ NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
 PCT_LIM_LONG        = 45      # % position limit long
 PCT_LIM_SHORT       = 45 # % position limit short
-PCT_QTY_BASE        = 505 # pct order qty in bps as pct of acct on each order
+PCT_QTY_BASE        = 250 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =  0.25      # Minimum time between loops
 RISK_CHARGE_VOL     =   285.5  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
@@ -105,7 +107,7 @@ PCT_LIM_SHORT       *= PCT
 PCT_QTY_BASE        *= BP
 VOL_PRIOR           *= PCT
 
-MAX_SKEW = 700
+MAX_SKEW = 350
 TP = 0.15
 SL = -0.04
 avgavgpnls = []
@@ -121,6 +123,7 @@ class MarketMaker( object ):
         self.equity_btc_init    = None
         self.con_size           = float( CONTRACT_SIZE )
         self.client             = None
+        self.client2             = None
         self.deltas             = OrderedDict()
         self.futures            = OrderedDict()
         self.futures_prv        = OrderedDict()
@@ -154,6 +157,7 @@ class MarketMaker( object ):
         self.monitor            = monitor
         self.output             = output or monitor
         self.positions          = OrderedDict()
+        self.positions2          = OrderedDict()
         self.spread_data        = None
         self.this_mtime         = None
         self.ts                 = None
@@ -177,6 +181,7 @@ class MarketMaker( object ):
             self.quantity_switch = data['quantity']
     def create_client( self ):
         self.client = RestClient( KEY, SECRET, URL )
+        self.client2 = RestClient( KEY2, SECRET2, URL )
 
     def get_bbo( self, contract ): # Get best b/o excluding own orders
         j = self.ohlcv[contract].json()
@@ -1320,6 +1325,8 @@ class MarketMaker( object ):
                    #sleep(60 * 11)
                 except:
                     abc = 1
+            positionSize = 0
+            positionPos = 0
             for p in self.positions:
                 positionSize = positionSize + self.positions[p]['size']
                 if self.positions[p]['size'] < 0:
@@ -1377,6 +1384,56 @@ class MarketMaker( object ):
 
         self.equity_btc = account[ 'equity' ]
         self.equity_usd = self.equity_btc * spot
+        print('equity usd rounded ' + str(int(self.equity_usd * 10) / 10))
+        positionSize2 = 0
+        positionPos2 = 0
+        self.update_positions2()
+        for p in self.positions2:
+            positionSize2 = positionSize2 + self.positions2[p]['size']
+            if self.positions2[p]['size'] < 0:
+                positionPos2 = positionPos2 - self.positions2[p]['size']
+            else:   
+                positionPos2 = positionPos2 + self.positions2[p]['size']
+        usd_short = positionSize2 / 10
+
+        if usd_short * -1 != int(self.equity_usd * 10) / 10: #=-100 90  100 90 +10 80 90 -10
+            size = (usd_short * -1 - int(self.equity_usd * 10) / 10) * 10
+            #print('adjust short!')
+            self.client2.cancelall()
+            selling = False
+            if size < 0:
+                selling = True
+                size = size * -1
+            #print('positionSize: ' + str(positionSize2))
+            #print('size: ' + str(size))
+            counter = 0
+            for p in self.client2.positions():
+                counter = counter + 1
+            if counter == 0:
+                counter = 1
+            size = size / counter
+            if size > 1:
+                print('adjust short!')
+                print('size2: ' + str(size))
+                try:
+                    for p in self.client2.positions():
+                        sleep(0.15)
+                        if selling:
+
+                            if 'ETH' in p['instrument']:
+                                self.client2.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
+                            else:
+                                self.client2.sell(  p['instrument'], size, self.get_spot() * 0.9, 'false' )
+
+                        else:
+
+                            if 'ETH' in p['instrument']:
+                                self.client2.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
+                            else:
+                                self.client2.buy(  p['instrument'], size, self.get_spot() * 1.1, 'false' )
+                    sleep(60 * 0.1)
+                except Exception as e:
+                    print(e)
         print('equity')
         print(self.equity_btc)
         self.update_positions()
@@ -1407,7 +1464,22 @@ class MarketMaker( object ):
             if pos[ 'instrument' ] in self.futures:
                 self.positions[ pos[ 'instrument' ]] = pos
         
-    
+    def update_positions2( self ):
+
+        self.positions2  = OrderedDict( { f: {
+            'size':         0,
+            'sizeBtc':      0,
+            'indexPrice':   None,
+            'markPrice':    None
+        } for f in self.futures.keys() } )
+        positions2       = self.client2.positions()
+        
+        for pos in positions2:
+            if 'ETH' in pos['instrument']:
+                pos['size'] = pos['size'] / 10
+            if pos[ 'instrument' ] in self.futures:
+                self.positions2[ pos[ 'instrument' ]] = pos
+       
     def update_timeseries( self ):
         
         if self.monitor:
