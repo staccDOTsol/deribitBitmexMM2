@@ -84,9 +84,9 @@ NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
 PCT_LIM_LONG        = 45      # % position limit long
 PCT_LIM_SHORT       = 45 # % position limit short
-PCT_QTY_BASE        = 305 # pct order qty in bps as pct of acct on each order
+PCT_QTY_BASE        = 505 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =  0.25      # Minimum time between loops
-RISK_CHARGE_VOL     =   85.5  # vol risk charge in bps per 100 vol
+RISK_CHARGE_VOL     =   285.5  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
 WAVELEN_MTIME_CHK   = 15        # time in seconds between check for file change
@@ -107,7 +107,7 @@ VOL_PRIOR           *= PCT
 
 MAX_SKEW = 700
 TP = 0.15
-SL = -0.08
+SL = -0.04
 avgavgpnls = []
 class MarketMaker( object ):
     
@@ -1053,7 +1053,7 @@ class MarketMaker( object ):
                             size = self.wantstomarket + self.marketed
                             size = size / diffratio
                             print('size: ' + str(size))
-                            if size > 0:
+                            if size > 1:
 
                                 #self.marketed = self.marketed - size / 10
                                 
@@ -1119,7 +1119,7 @@ class MarketMaker( object ):
                             size = self.wantstomarket - self.marketed #12.25 - 16.5
                             size = size / diffratio
                             print('size: ' + str(size))
-                            if size > 0:
+                            if size > 1:
                                 self.wantstomarket = 0
                                 self.waittilmarket = 2
                                 #self.marketed = self.marketed + size / 10
@@ -1282,18 +1282,19 @@ class MarketMaker( object ):
             avg = total
             avgavgpnls.append(avg)
             #print('avg pl: ' + str(avg))
-            if avg > TP:
+            positionSize = 0
+            positionPos = 0
+            for p in self.positions:
+                positionSize = positionSize + self.positions[p]['size']
+                if self.positions[p]['size'] < 0:
+                    positionPos = positionPos - self.positions[p]['size']
+                else:   
+                    positionPos = positionPos + self.positions[p]['size']
+            if avg > TP and positionSize != 0:
                 print('TP!')
                 self.client.cancelall()
                 self.tps = self.tps + 1
-                positionSize = 0
-                positionPos = 0
-                for p in self.positions:
-                    positionSize = positionSize + self.positions[p]['size']
-                    if self.positions[p]['size'] < 0:
-                        positionPos = positionPos - self.positions[p]['size']
-                    else:   
-                        positionPos = positionPos + self.positions[p]['size']
+                
                 if positionSize > 0:
                     selling = True
                     size = positionSize
@@ -1319,21 +1320,20 @@ class MarketMaker( object ):
                    #sleep(60 * 11)
                 except:
                     abc = 1
-
-            if avg < SL:
+            for p in self.positions:
+                positionSize = positionSize + self.positions[p]['size']
+                if self.positions[p]['size'] < 0:
+                    positionPos = positionPos - self.positions[p]['size']
+                else:   
+                    positionPos = positionPos + self.positions[p]['size']
+            if avg < SL and positionSize != 0:
                 print('SL!')
                 self.update_positions()
                 self.client.cancelall()
                 self.sls = self.sls + 1
                 positionSize = 0
                 positionPos = 0
-                for p in self.positions:
-                    positionSize = positionSize + self.positions[p]['size']
-                    print('positionSize: ' + str(positionSize))
-                    if self.positions[p]['size'] < 0:
-                        positionPos = positionPos - self.positions[p]['size']
-                    else:   
-                        positionPos = positionPos + self.positions[p]['size']
+                
                 if positionSize > 0:
                     selling = True
                     size = positionSize
