@@ -1389,12 +1389,13 @@ class MarketMaker( object ):
         positionPos2 = 0
         self.update_positions2()
         for p in self.positions2:
+            print(self.positions2[p]['size'])
             positionSize2 = positionSize2 + self.positions2[p]['size']
             if self.positions2[p]['size'] < 0:
                 positionPos2 = positionPos2 - self.positions2[p]['size']
             else:   
                 positionPos2 = positionPos2 + self.positions2[p]['size']
-        usd_short = positionSize2 / 10
+        usd_short = positionSize2 
         if usd_short * -1 != int(self.equity_usd * 10) / 10: #=-100 90  100 90 +10 80 90 -10
             size = (usd_short * -1 - (int(self.equity_usd * 10) / 10) / 10)
             #print('adjust short!')
