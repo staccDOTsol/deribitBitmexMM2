@@ -182,7 +182,7 @@ class MarketMaker( object ):
     def create_client( self ):
         self.client = RestClient( KEY, SECRET, URL )
         self.client2 = RestClient( KEY2, SECRET2, URL )
-
+        
     def get_bbo( self, contract ): # Get best b/o excluding own orders
         j = self.ohlcv[contract].json()
         fut2 = contract
@@ -1370,7 +1370,7 @@ class MarketMaker( object ):
                 except Exception as e:
                     print(e)
     def update_status( self ):
-        
+
         positionSize = 0
         positionPos = 0
         for p in self.positions:
@@ -1397,7 +1397,8 @@ class MarketMaker( object ):
                 positionPos2 = positionPos2 + self.positions2[p]['size']
         usd_short = positionSize2 
         if usd_short * -1 != int(self.equity_usd * 10) / 10: #=-100 90  100 90 +10 80 90 -10
-            size = (usd_short * -1 - (int(self.equity_usd * 10) / 10) / 10)
+            size = (usd_short * -1  - (int(self.equity_usd * 10) / 10))  #-210 138
+            print('size0: ' + str(size))
             #print('adjust short!')
             self.client2.cancelall()
             selling = False
@@ -1408,7 +1409,7 @@ class MarketMaker( object ):
             print('size: ' + str(size))
             print('usd_short: ' + str(usd_short))
             counter = len(self.futures)
-            #size = size / counter
+            size = size / counter
             if size > 1:
                 print('adjust short!')
                 print('size2: ' + str(size))
