@@ -66,10 +66,10 @@ args    = parser.parse_args()
 URL     = 'https://www.deribit.com'#ctrl+h!!!!!
 skews = []
 
-KEY2 = ""
-SECRET2 = ""
-KEY     = ''
-SECRET  = ''
+KEY = "iK8orQnY"
+SECRET = "VautqVCoZzqPk065IOG_KzBx07bdS90_gvV2FJyuFSA"
+KEY2     = '0EfmSIaF'
+SECRET2  = 'dNfFAB7ygoWFDveqaS9bG3ElUg1oKb6oUXKqNp9480k'
 BP                  = 1e-4      # one basis point
 BTC_SYMBOL          = 'btc'
 CONTRACT_SIZE       = 10       # USD
@@ -84,8 +84,8 @@ MAX_LAYERS          =  2# max orders to layer the ob with on each side
 MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
 NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
-PCT_LIM_LONG        = 45      # % position limit long
-PCT_LIM_SHORT       = 45 # % position limit short
+PCT_LIM_LONG        = 35      # % position limit long
+PCT_LIM_SHORT       = 35 # % position limit short
 PCT_QTY_BASE        = 250 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =  0.25      # Minimum time between loops
 RISK_CHARGE_VOL     =   285.5  # vol risk charge in bps per 100 vol
@@ -1406,31 +1406,27 @@ class MarketMaker( object ):
                 size = size * -1
             #print('positionSize: ' + str(positionSize2))
             #print('size: ' + str(size))
-            counter = 0
-            for p in self.client2.positions():
-                counter = counter + 1
-            if counter == 0:
-                counter = 1
+            counter = len(self.futures)
             size = size / counter
             if size > 1:
                 print('adjust short!')
                 print('size2: ' + str(size))
                 try:
-                    for p in self.client2.positions():
+                    for p in self.futures.keys():
                         sleep(0.15)
                         if selling:
 
-                            if 'ETH' in p['instrument']:
-                                self.client2.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
+                            if 'ETH' in p:
+                                self.client2.sell(  p, size, self.get_eth() * 0.9, 'false' )
                             else:
-                                self.client2.sell(  p['instrument'], size, self.get_spot() * 0.9, 'false' )
+                                self.client2.sell(  p, size, self.get_spot() * 0.9, 'false' )
 
                         else:
 
                             if 'ETH' in p['instrument']:
-                                self.client2.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
+                                self.client2.buy(  p, size, self.get_eth() * 1.1, 'false' )
                             else:
-                                self.client2.buy(  p['instrument'], size, self.get_spot() * 1.1, 'false' )
+                                self.client2.buy(  p, size, self.get_spot() * 1.1, 'false' )
                     sleep(60 * 0.1)
                 except Exception as e:
                     print(e)
