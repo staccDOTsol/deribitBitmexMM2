@@ -518,6 +518,7 @@ class MarketMaker( object ):
         for k in self.vols.keys():
             print(self.vols[k])
             if self.vols[k] > 3:
+                self.vols               = OrderedDict()
                 print('volatility high! Taking 1hr break!')
                 self.update_positions()
                 self.client.cancelall()
