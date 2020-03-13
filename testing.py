@@ -66,10 +66,10 @@ args    = parser.parse_args()
 URL     = 'https://www.deribit.com'#ctrl+h!!!!!
 skews = []
 
-KEY = "iK8orQnY"
-SECRET = "VautqVCoZzqPk065IOG_KzBx07bdS90_gvV2FJyuFSA"
-KEY2     = '0EfmSIaF'
-SECRET2  = 'dNfFAB7ygoWFDveqaS9bG3ElUg1oKb6oUXKqNp9480k'
+KEY = ""
+SECRET = ""
+KEY2     = ''
+SECRET2  = ''
 BP                  = 1e-4      # one basis point
 BTC_SYMBOL          = 'btc'
 CONTRACT_SIZE       = 10       # USD
@@ -515,6 +515,45 @@ class MarketMaker( object ):
                 } for k in self.vols.keys()
                 }, 
                 multiple = 100, title = 'Vols' )
+        for k in self.vols.keys():
+            print(self.vols[k])
+            if self.vols[k] > 3:
+                print('volatility high! Taking 1hr break!')
+                self.update_positions()
+                self.client.cancelall()
+                self.sls = self.sls + 1
+                positionSize = 0
+                positionPos = 0
+                
+                if positionSize > 0:
+                    selling = True
+                    size = positionSize
+                else:
+                    selling = False
+                    size = positionSize * -1
+                print('positionSize: ' + str(positionSize))
+                size = size / len(self.client.positions())
+                print('size: ' + str(size))
+                try:
+                    for p in self.client.positions():
+                        sleep(0.15)
+                        if selling:
+
+                            if 'ETH' in p['instrument']:
+                                self.client.sell(  p['instrument'], size, self.get_eth() * 0.9, 'false' )
+                            else:
+                                self.client.sell(  p['instrument'], size, self.get_spot() * 0.9, 'false' )
+
+                        else:
+
+                            if 'ETH' in p['instrument']:
+                                self.client.buy(  p['instrument'], size, self.get_eth() * 1.1, 'false' )
+                            else:
+                                self.client.buy(  p['instrument'], size, self.get_spot() * 1.1, 'false' )
+                    sleep(60 * 0.5)
+                except Exception as e:
+                    print(e)
+                sleep(60 * 60)
             #print( '\nMean Loop Time: %s' % round( self.mean_looptime, 2 ))
             #print( '' )
             for k in self.positions.keys():
