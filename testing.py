@@ -66,10 +66,10 @@ args    = parser.parse_args()
 URL     = 'https://www.deribit.com'#ctrl+h!!!!!
 skews = []
 
-KEY = "iK8orQnY"
-SECRET = "VautqVCoZzqPk065IOG_KzBx07bdS90_gvV2FJyuFSA"
-KEY2     = '0EfmSIaF'
-SECRET2  = 'dNfFAB7ygoWFDveqaS9bG3ElUg1oKb6oUXKqNp9480k'
+KEY = ""
+SECRET = ""
+KEY2     = ''
+SECRET2  = ''
 ULTRACONSERVATIVE = True
 BP                  = 1e-4      # one basis point
 BTC_SYMBOL          = 'btc'
@@ -87,7 +87,7 @@ NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
 PCT_LIM_LONG        = 35      # % position limit long
 PCT_LIM_SHORT       = 35 # % position limit short
-PCT_QTY_BASE        = 250 # pct order qty in bps as pct of acct on each order
+PCT_QTY_BASE        = 50 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =  0.25      # Minimum time between loops
 RISK_CHARGE_VOL     =   105.5  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
@@ -117,6 +117,7 @@ class MarketMaker( object ):
     def __init__( self, monitor = True, output = True ):
         self.equity_usd         = None
         self.tps = 0
+        self.maxqty = 0
         self.sls = 0
         self.equity_btc         = None
         self.eth = 0
@@ -747,9 +748,9 @@ class MarketMaker( object ):
                     #print('pos size: ' + str(positionSize))
                     if positionSize > 0:
                         print((qty * 10 * MAX_LAYERS) / 2 + positionSize)
-                        if qty * 10 > maxqty:
-                            maxqty = qty * 10
-                        if ((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True && (qty * 10 * MAX_LAYERS) / 2 + positionSize > maxqty):
+                        if qty * 10 > self.maxqty:
+                            self.maxqty = qty * 10
+                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty)):
                             print('max skew on buy')
                             gogo = False
 
@@ -868,10 +869,10 @@ class MarketMaker( object ):
                     
                     if positionSize < 0:
 
-                        if qty * 10 > maxqty:
-                            maxqty = qty * 10
+                        if qty * 10 > self.maxqty:
+                            self.maxqty = qty * 10
                         print((qty * 10 * MAX_LAYERS) / 2 + positionSize * -1)
-                        if ((qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW) || (ULTRACONSERVATIVE == True && (qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > maxqty):
+                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty)):
                             print('max skew on sell')
                             gogo = False
                     if i < len_ask_ords and gogo == True: 
