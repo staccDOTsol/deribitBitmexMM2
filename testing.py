@@ -109,7 +109,7 @@ VOL_PRIOR           *= PCT
 
 MAX_SKEW = 550
 TP = 0.15
-SL = -0.04
+SL = -0.12
 avgavgpnls = []
 class MarketMaker( object ):
     
@@ -1374,12 +1374,11 @@ class MarketMaker( object ):
                 else:   
                     positionPos = positionPos + self.positions[p]['size']
             if avg < SL and positionSize != 0:
-                print('SL!')
+                print('SL! ' + str(avg))
                 self.update_positions()
                 self.client.cancelall()
                 self.sls = self.sls + 1
-                positionSize = 0
-                positionPos = 0
+                
                 
                 if positionSize > 0:
                     selling = True
