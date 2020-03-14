@@ -66,10 +66,11 @@ args    = parser.parse_args()
 URL     = 'https://www.deribit.com'#ctrl+h!!!!!
 skews = []
 
-KEY = ""
-SECRET = ""
-KEY2     = ''
-SECRET2  = ''
+KEY = "iK8orQnY"
+SECRET = "VautqVCoZzqPk065IOG_KzBx07bdS90_gvV2FJyuFSA"
+KEY2     = '0EfmSIaF'
+SECRET2  = 'dNfFAB7ygoWFDveqaS9bG3ElUg1oKb6oUXKqNp9480k'
+ULTRACONSERVATIVE = True
 BP                  = 1e-4      # one basis point
 BTC_SYMBOL          = 'btc'
 CONTRACT_SIZE       = 10       # USD
@@ -746,7 +747,9 @@ class MarketMaker( object ):
                     #print('pos size: ' + str(positionSize))
                     if positionSize > 0:
                         print((qty * 10 * MAX_LAYERS) / 2 + positionSize)
-                        if (qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW:
+                        if qty * 10 > maxqty:
+                            maxqty = qty * 10
+                        if ((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True && (qty * 10 * MAX_LAYERS) / 2 + positionSize > maxqty):
                             print('max skew on buy')
                             gogo = False
 
@@ -864,8 +867,11 @@ class MarketMaker( object ):
                     #print('pos size: ' + str(positionSize))
                     
                     if positionSize < 0:
+
+                        if qty * 10 > maxqty:
+                            maxqty = qty * 10
                         print((qty * 10 * MAX_LAYERS) / 2 + positionSize * -1)
-                        if (qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW:
+                        if ((qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW) || (ULTRACONSERVATIVE == True && (qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > maxqty):
                             print('max skew on sell')
                             gogo = False
                     if i < len_ask_ords and gogo == True: 
