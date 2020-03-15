@@ -529,7 +529,12 @@ class MarketMaker( object ):
                 self.sls = self.sls + 1
                 positionSize = 0
                 positionPos = 0
-                
+                for p in self.positions:
+                    positionSize = positionSize + self.positions[p]['size']
+                    if self.positions[p]['size'] < 0:
+                        positionPos = positionPos - self.positions[p]['size']
+                    else:   
+                        positionPos = positionPos + self.positions[p]['size']
                 if positionSize > 0:
                     selling = True
                     size = positionSize
