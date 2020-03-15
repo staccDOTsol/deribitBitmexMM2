@@ -66,10 +66,10 @@ args    = parser.parse_args()
 URL     = 'https://www.deribit.com'#ctrl+h!!!!!
 skews = []
 
-KEY = ""
-SECRET = ""
-KEY2     = ''
-SECRET2  = ''
+KEY2 = ""
+SECRET2 = ""
+KEY     = ''
+SECRET  = ''
 ULTRACONSERVATIVE = True
 BP                  = 1e-4      # one basis point
 BTC_SYMBOL          = 'btc'
@@ -87,7 +87,7 @@ NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
 PCT_LIM_LONG        = 35      # % position limit long
 PCT_LIM_SHORT       = 35 # % position limit short
-PCT_QTY_BASE        = 50 # pct order qty in bps as pct of acct on each order
+PCT_QTY_BASE        = 250 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =  0.25      # Minimum time between loops
 RISK_CHARGE_VOL     =   285.5  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
@@ -183,8 +183,10 @@ class MarketMaker( object ):
             self.quantity_switch = data['quantity']
     def create_client( self ):
         self.client = RestClient( KEY, SECRET, URL )
-        self.client2 = RestClient( KEY2, SECRET2, URL )
-        
+        try:
+            self.client2 = RestClient( KEY2, SECRET2, URL )
+        except:
+            print('only one key, all good')
     def get_bbo( self, contract ): # Get best b/o excluding own orders
         j = self.ohlcv[contract].json()
         fut2 = contract
@@ -1444,40 +1446,45 @@ class MarketMaker( object ):
         usd_short = positionSize2 
         if usd_short * -1 != int(self.equity_usd * 10) / 10: #=-100 90  100 90 +10 80 90 -10
             size = (usd_short * -1  - (int(self.equity_usd * 10) / 10))  #-210 138
-            print('size0: ' + str(size))
-            #print('adjust short!')
-            self.client2.cancelall()
-            selling = False
-            if size < 0:
-                selling = True
-                size = size * -1
-            #print('positionSize: ' + str(positionSize2))
-            print('size: ' + str(size))
-            print('usd_short: ' + str(usd_short))
-            counter = len(self.futures)
-            size = size / counter
-            if size > 1:
-                print('adjust short!')
-                print('size2: ' + str(size))
-                try:
-                    for p in self.futures.keys():
-                        sleep(0.15)
-                        if selling:
+            try:
+                print('size0: ' + str(size))
+                #print('adjust short!')
+                
+                self.client2.cancelall()
+                
+                selling = False
+                if size < 0:
+                    selling = True
+                    size = size * -1
+                #print('positionSize: ' + str(positionSize2))
+                print('size: ' + str(size))
+                print('usd_short: ' + str(usd_short))
+                counter = len(self.futures)
+                size = size / counter
+                if size > 1:
+                    print('adjust short!')
+                    print('size2: ' + str(size))
+                    try:
+                        for p in self.futures.keys():
+                            sleep(0.15)
+                            if selling:
 
-                            if 'ETH' in p:
-                                self.client2.sell(  p, size, self.get_eth() * 0.98, 'false' )
+                                if 'ETH' in p:
+                                    self.client2.sell(  p, size, self.get_eth() * 0.98, 'false' )
+                                else:
+                                    self.client2.sell(  p, size, self.get_spot() * 0.98, 'false' )
+
                             else:
-                                self.client2.sell(  p, size, self.get_spot() * 0.98, 'false' )
 
-                        else:
-
-                            if 'ETH' in p:
-                                self.client2.buy(  p, size, self.get_eth() * 1.02, 'false' )
-                            else:
-                                self.client2.buy(  p, size, self.get_spot() * 1.02, 'false' )
-                    sleep(60 * 0.1)
-                except Exception as e:
-                    print(e)
+                                if 'ETH' in p:
+                                    self.client2.buy(  p, size, self.get_eth() * 1.02, 'false' )
+                                else:
+                                    self.client2.buy(  p, size, self.get_spot() * 1.02, 'false' )
+                        sleep(60 * 0.1)
+                    except Exception as e:
+                        print(e)
+            except:
+                print('one key, all good!')
         print('equity')
         print(self.equity_btc)
         self.update_positions()
@@ -1516,14 +1523,16 @@ class MarketMaker( object ):
             'indexPrice':   None,
             'markPrice':    None
         } for f in self.futures.keys() } )
-        positions2       = self.client2.positions()
-        
-        for pos in positions2:
-            if 'ETH' in pos['instrument']:
-                pos['size'] = pos['size'] / 10
-            if pos[ 'instrument' ] in self.futures:
-                self.positions2[ pos[ 'instrument' ]] = pos
-       
+        try:
+            positions2       = self.client2.positions()
+            
+            for pos in positions2:
+                if 'ETH' in pos['instrument']:
+                    pos['size'] = pos['size'] / 10
+                if pos[ 'instrument' ] in self.futures:
+                    self.positions2[ pos[ 'instrument' ]] = pos
+        except:
+            print('only one key, all good!')   
     def update_timeseries( self ):
         
         if self.monitor:
