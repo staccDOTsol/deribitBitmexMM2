@@ -1103,6 +1103,13 @@ class MarketMaker( object ):
             self.avg_pnl_sl_tp()
             positionSize = 0
             positionPos = 0
+            positionPrices = {}
+            positionPricesEth = {}
+            for p in self.client.positions():
+                if 'ETH' in p['instrument']:
+                    positionPricesEth[p['instrument']] = self.get_eth() < p['averagePrice']
+                else:
+                    positionPrices[p['instrument']] = self.get_spot() < p['averagePrice']
             for p in self.positions:
                 positionSize = positionSize + self.positions[p]['size']
                 if self.positions[p]['size'] < 0:
@@ -1132,6 +1139,7 @@ class MarketMaker( object ):
                     self.wantstomarket = positionSize / 6
                     self.waittilmarket = self.waittilmarket - 1
                     print('positionSize: ' + str(positionSize))
+
                     if positionSize > 1:
                         if self.waittilmarket <= 0 or self.posdiff / self.lastposdiff > 1.25:
                             size = self.wantstomarket + self.marketed
@@ -1175,9 +1183,18 @@ class MarketMaker( object ):
                                             sold = True
                                             size = size
                                             if 'ETH' in p['instrument']:
-                                                self.client.sell(  p['instrument'], size, self.get_eth() * 0.98, 'false' )
+                                                if positionPricesEth[p['instrument']] == True:
+                                                    self.client.sell(  p['instrument'], size, p['averagePrice'], 'true' )
+                                              
+                                                else:
+                                                    self.client.sell(  p['instrument'], size, self.get_eth() * 0.98, 'false' )
+                                                
                                             else:
-                                                self.client.sell(  p['instrument'], size, self.get_spot() * 0.98, 'false' )
+                                                if positionPrices[p['instrument']] == True:
+                                                    self.client.sell(  p['instrument'], size, p['averagePrice'], 'true' )
+                                              
+                                                else:
+                                                    self.client.sell(  p['instrument'], size, self.get_eth() * 0.98, 'false' )
                                 if sold == False:
                                     size = size / counter
                                     for p in self.client.positions():
@@ -1187,9 +1204,18 @@ class MarketMaker( object ):
                                         if direction == 'sell':
                                             size = size
                                             if 'ETH' in p['instrument']:
-                                                self.client.sell(  p['instrument'], size, self.get_eth() * 0.98, 'false' )
+                                                if positionPricesEth[p['instrument']] == True:
+                                                    self.client.sell(  p['instrument'], size, p['averagePrice'], 'true' )
+                                              
+                                                else:
+                                                    self.client.sell(  p['instrument'], size, self.get_eth() * 0.98, 'false' )
+                                                
                                             else:
-                                                self.client.sell(  p['instrument'], size, self.get_spot() * 0.98, 'false' )
+                                                if positionPrices[p['instrument']] == True:
+                                                    self.client.sell(  p['instrument'], size, p['averagePrice'], 'true' )
+                                              
+                                                else:
+                                                    self.client.sell(  p['instrument'], size, self.get_eth() * 0.98, 'false' )
 
                 else:
                     if self.marketed < 0:
@@ -1240,9 +1266,18 @@ class MarketMaker( object ):
                                             bought = True
                                             
                                             if 'ETH' in p['instrument']:
-                                                self.client.buy(  p['instrument'], size, self.get_eth() * 1.02, 'false' )
+                                                if positionPricesEth[p['instrument']] == False:
+                                                    self.client.buy(  p['instrument'], size, p['averagePrice'], 'true' )
+                                              
+                                                else:
+                                                    self.client.buy(  p['instrument'], size, self.get_eth() * 1.02, 'false' )
+                                                
                                             else:
-                                                self.client.buy(  p['instrument'], size, self.get_spot() * 1.02, 'false' )
+                                                if positionPrices[p['instrument']] == False:
+                                                    self.client.buy(  p['instrument'], size, p['averagePrice'], 'true' )
+                                              
+                                                else:
+                                                    self.client.buy(  p['instrument'], size, self.get_eth() * 1.02, 'false' )
                                 if bought == False:
                                     size = size / counter
                                     for p in self.client.positions():
@@ -1254,9 +1289,18 @@ class MarketMaker( object ):
                                             bought = True
                                             
                                             if 'ETH' in p['instrument']:
-                                                self.client.buy(  p['instrument'], size, self.get_eth() * 1.02, 'false' )
+                                                if positionPricesEth[p['instrument']] == False:
+                                                    self.client.buy(  p['instrument'], size, p['averagePrice'], 'true' )
+                                              
+                                                else:
+                                                    self.client.buy(  p['instrument'], size, self.get_eth() * 1.02, 'false' )
+                                                
                                             else:
-                                                self.client.buy(  p['instrument'], size, self.get_spot() * 1.02, 'false' )
+                                                if positionPrices[p['instrument']] == False:
+                                                    self.client.buy(  p['instrument'], size, p['averagePrice'], 'true' )
+                                              
+                                                else:
+                                                    self.client.buy(  p['instrument'], size, self.get_eth() * 1.02, 'false' )
             except Exception as e:
                 print(e)
             self.place_orders()
