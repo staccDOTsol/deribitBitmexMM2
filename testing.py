@@ -8,7 +8,7 @@ from datetime import date, timedelta
 from utils          import ( get_logger, lag, print_dict, print_dict_of_dicts, sort_by_key,
                              ticksize_ceil, ticksize_floor, ticksize_round )
 import quantstats as qs
-
+import ccxt
 import ccxt
 import requests
 import pandas as pd
@@ -134,7 +134,7 @@ class MarketMaker( object ):
         self.futures_prv        = OrderedDict()
         self.logger             = None
         self.volatility = 0
-        
+        self.ccxt = None
         self.bbw = {}
         self.atr = {}
         self.diffdeltab = {}
@@ -184,8 +184,13 @@ class MarketMaker( object ):
             self.price = data['price']
             self.volatility = data['volatility']
             self.quantity_switch = data['quantity']
+
     def create_client( self ):
         self.client = RestClient( KEY, SECRET, URL )
+        self.ccxt     = ccxt.deribit({
+            'apiKey': KEY,
+            'secret': SECRET,
+        })
         try:
             self.client2 = RestClient( KEY2, SECRET2, URL )
         except:
@@ -522,52 +527,63 @@ class MarketMaker( object ):
                 } for k in self.vols.keys()
                 }, 
                 multiple = 100, title = 'Vols' )
+        gobreak = False
+        breakfor = 0
         for k in self.vols.keys():
-            print(self.vols[k])
-            if self.vols[k] > 5.5:
-                self.vols               = OrderedDict()
-                print('volatility high! Taking 1hr break!')
-                self.update_positions()
-                self.client.cancelall()
-                self.sls = self.sls + 1
+            if self.vols[k] > 1.5:
+                gobreak = True
+                breakfor = 0.25
+                print('volatility high! taking 0.25hr break')
+            if self.vols[k] > 2:
+                gobreak = True
+                breakfor = 0.5
+                print('volatility high! taking 0.5hr break')
+            if self.vols[k] > 2.5:
+                gobreak = True
+                breakfor = 1
+                print('volatility high! taking 1hr break')
+        
+        if gobreak == True:
+            self.update_positions()
+            self.client.cancelall()
+            self.sls = self.sls + 1
+            positionSize = 0
+            positionPos = 0
+            for p in self.positions:
+                positionSize = positionSize + self.positions[p]['size']
+                if self.positions[p]['size'] < 0:
+                    positionPos = positionPos - self.positions[p]['size']
+                else:   
+                    positionPos = positionPos + self.positions[p]['size']
+            if positionSize > 0:
+                selling = True
+                size = positionSize
+            else:
+                selling = False
+                size = positionSize * -1
+            print('positionSize: ' + str(positionSize))
+            size = size / len(self.client.positions())
+            print('size: ' + str(size))
+            try:
+                for p in self.client.positions():
+                    sleep(0.15)
+                    if selling:
 
-                positionSize = 0
-                positionPos = 0
-                for p in self.positions:
-                    positionSize = positionSize + self.positions[p]['size']
-                    if self.positions[p]['size'] < 0:
-                        positionPos = positionPos - self.positions[p]['size']
-                    else:   
-                        positionPos = positionPos + self.positions[p]['size']
-                if positionSize > 0:
-                    selling = True
-                    size = positionSize
-                else:
-                    selling = False
-                    size = positionSize * -1
-                print('positionSize: ' + str(positionSize))
-                size = size / len(self.client.positions())
-                print('size: ' + str(size))
-                try:
-                    for p in self.client.positions():
-                        sleep(0.15)
-                        if selling:
-
-                            if 'ETH' in p['instrument']:
-                                self.client.sell(  p['instrument'], size, self.get_eth() * 0.98, 'false' )
-                            else:
-                                self.client.sell(  p['instrument'], size, self.get_spot() * 0.98, 'false' )
-
+                        if 'ETH' in p['instrument']:
+                            self.client.sell(  p['instrument'], size, self.get_eth() * 0.98, 'false' )
                         else:
+                            self.client.sell(  p['instrument'], size, self.get_spot() * 0.98, 'false' )
 
-                            if 'ETH' in p['instrument']:
-                                self.client.buy(  p['instrument'], size, self.get_eth() * 1.02, 'false' )
-                            else:
-                                self.client.buy(  p['instrument'], size, self.get_spot() * 1.02, 'false' )
-                    sleep(60 * 0.5)
-                except Exception as e:
-                    print(e)
-                sleep(60 * 60)
+                    else:
+
+                        if 'ETH' in p['instrument']:
+                            self.client.buy(  p['instrument'], size, self.get_eth() * 1.02, 'false' )
+                        else:
+                            self.client.buy(  p['instrument'], size, self.get_spot() * 1.02, 'false' )
+            except Exception as e:
+                print(e)
+            self.vols               = OrderedDict()
+            sleep(60 * 60 * breakfor)
             #print( '\nMean Loop Time: %s' % round( self.mean_looptime, 2 ))
             #print( '' )
             for k in self.positions.keys():
