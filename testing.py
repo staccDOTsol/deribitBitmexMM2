@@ -87,7 +87,7 @@ NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
 PCT_LIM_LONG        = 35      # % position limit long
 PCT_LIM_SHORT       = 35 # % position limit short
-PCT_QTY_BASE        = 250 # pct order qty in bps as pct of acct on each order
+PCT_QTY_BASE        = 50 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =  0.25      # Minimum time between loops
 RISK_CHARGE_VOL     =   285.5  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
@@ -108,6 +108,8 @@ PCT_LIM_SHORT       *= PCT
 PCT_QTY_BASE        *= BP
 VOL_PRIOR           *= PCT
 
+
+
 MAX_SKEW = 550
 TP = 0.15
 SL = -0.12
@@ -116,6 +118,7 @@ class MarketMaker( object ):
     
     def __init__( self, monitor = True, output = True ):
         self.equity_usd         = None
+        self.slsinarow = 0
         self.tps = 0
         self.maxqty = 0
         self.sls = 0
@@ -527,6 +530,7 @@ class MarketMaker( object ):
                 self.update_positions()
                 self.client.cancelall()
                 self.sls = self.sls + 1
+
                 positionSize = 0
                 positionPos = 0
                 for p in self.positions:
@@ -1399,6 +1403,52 @@ class MarketMaker( object ):
                 self.sls = self.sls + 1
                 
                 
+                self.slsinarow = self.slsinarow + 1
+                if self.slsinarow == 2:
+                    print(' ')
+                    print('two sls in a row!')
+                    print(' ')
+                    self.update_positions()
+                    self.client.cancelall()
+                    self.sls = self.sls + 1
+
+                    positionSize = 0
+                    positionPos = 0
+                    for p in self.positions:
+                        positionSize = positionSize + self.positions[p]['size']
+                        if self.positions[p]['size'] < 0:
+                            positionPos = positionPos - self.positions[p]['size']
+                        else:   
+                            positionPos = positionPos + self.positions[p]['size']
+                    if positionSize > 0:
+                        selling = True
+                        size = positionSize
+                    else:
+                        selling = False
+                        size = positionSize * -1
+                    print('positionSize: ' + str(positionSize))
+                    size = size / len(self.client.positions())
+                    print('size: ' + str(size))
+                    try:
+                        for p in self.client.positions():
+                            sleep(0.15)
+                            if selling:
+
+                                if 'ETH' in p['instrument']:
+                                    self.client.sell(  p['instrument'], size, self.get_eth() * 0.98, 'false' )
+                                else:
+                                    self.client.sell(  p['instrument'], size, self.get_spot() * 0.98, 'false' )
+
+                            else:
+
+                                if 'ETH' in p['instrument']:
+                                    self.client.buy(  p['instrument'], size, self.get_eth() * 1.02, 'false' )
+                                else:
+                                    self.client.buy(  p['instrument'], size, self.get_spot() * 1.02, 'false' )
+                        sleep(60 * 0.5)
+                    except Exception as e:
+                        print(e)
+                    sleep(60 * 0.5)
                 if positionSize > 0:
                     selling = True
                     size = positionSize
@@ -1427,6 +1477,8 @@ class MarketMaker( object ):
                     sleep(60 * 0.5)
                 except Exception as e:
                     print(e)
+            else:
+                self.slsinarow = 0
     def update_status( self ):
 
         positionSize = 0
