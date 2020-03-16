@@ -1455,7 +1455,7 @@ class MarketMaker( object ):
                 positionPos2 = positionPos2 + self.positions2[p]['size']
         usd_short = positionSize2 
         if usd_short * -1 != int(self.equity_usd * 10) / 100: #=-100 90  100 90 +10 80 90 -10
-            size = (usd_short * -1  - (int(self.equity_usd * 10) / 100))  #-210 138
+            size = (usd_short * -1  - (int(self.equity_usd * 10) / 100)) * 100  #-210 138
             try:
                 print('size0: ' + str(size))
                 #print('adjust short!')
