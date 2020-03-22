@@ -1,6 +1,6 @@
 	{"directional": [0],
 	"price": [0,1,2,3],
 	"volatility": [1,2,3],
-	"quantity": [1,2,3,4],
-"minMaxDD": -1000,
-"maxMaxDD": 1000}
+	"quantity": [1,2,4],
+"minMaxDD": -7,
+"maxMaxDD": 20}
