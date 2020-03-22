@@ -8,6 +8,7 @@ from datetime import date, timedelta
 from utils          import ( get_logger, lag, print_dict, print_dict_of_dicts, sort_by_key,
                              ticksize_ceil, ticksize_floor, ticksize_round )
 import quantstats as qs
+import os
 import _thread
 import ccxt
 from flask import Flask
@@ -74,11 +75,10 @@ args    = parser.parse_args()
 URL     = 'https://www.deribit.com'#ctrl+h!!!!!
 skews = []
 
-KEY2 = "C1UGHf6-"
-SECRET2 = "qNYfTPo6-5GD8YhKCTJvPsW3_t-dkRq9rbRltMaVqqM"
-
-KEY     = 'lGScHgoJ'
-SECRET  = 'hpbl22Nb9pf_mwTZ8mSsfG1U9d2aQ9cztlhYDYVelO8'
+KEY2 = os.environ['KEY2']
+SECRET2 = os.environ['SECRET2']
+KEY     = os.environ['KEY']
+SECRET  = os.environ['SECRET']
 ULTRACONSERVATIVE = True
 BP                  = 1e-4      # one basis point
 BTC_SYMBOL          = 'btc'
@@ -96,7 +96,7 @@ NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
 PCT_LIM_LONG        = 10      # % position limit long
 PCT_LIM_SHORT       = 10 # % position limit short
-PCT_QTY_BASE        = 20/4 # pct order qty in bps as pct of acct on each order
+PCT_QTY_BASE        = 20 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =  0.25      # Minimum time between loops
 RISK_CHARGE_VOL     =   280*4  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
@@ -2301,7 +2301,7 @@ def marketThread(self, instrument, buyorsell, size):
         #else:
         #    self.client.sell(  instrument, size, mid * 0.98, 'false' )                 
 def flaskThread():
-    app.run(debug=False, use_reloader=False,host='0.0.0.0', port=8086)      
+    app.run(debug=False, use_reloader=False,host='0.0.0.0', port=8081)      
 
 if __name__ == '__main__':
     
