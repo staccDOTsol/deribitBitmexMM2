@@ -978,6 +978,7 @@ class MarketMaker( object ):
                                 qty = self.maxqty / 10 * 2.5 * 5
                             else:
                                 qty = ps
+                    qty = int(qty)
                     if positionSize > 0:
                         print((qty * 10 * MAX_LAYERS) / 2 + positionSize)
                         print('maxqty: ' + str(self.maxqty))             
@@ -1236,6 +1237,8 @@ class MarketMaker( object ):
                                 qty = self.maxqty / 10 * 2.5 * 5
                             else:
                                 qty = ps
+                        
+                    qty = int(qty)
                     #print('pos size: ' + str(positionSize))
 
                     if positionSize < 0:
