@@ -74,11 +74,10 @@ args    = parser.parse_args()
 URL     = 'https://www.deribit.com'#ctrl+h!!!!!
 skews = []
 
-KEY2 = "C1UGHf6-"
-SECRET2 = "qNYfTPo6-5GD8YhKCTJvPsW3_t-dkRq9rbRltMaVqqM"
-
-KEY     = 'lGScHgoJ'
-SECRET  = 'hpbl22Nb9pf_mwTZ8mSsfG1U9d2aQ9cztlhYDYVelO8'
+KEY2 = ""
+SECRET2 = ""
+KEY     = 'DO1dc6eh'
+SECRET  = 'NsuFsiRd0Mm3k70UUC0UEsuzb6v_-raKWT2EoA4SZm0'
 ULTRACONSERVATIVE = True
 BP                  = 1e-4      # one basis point
 BTC_SYMBOL          = 'btc'
@@ -96,7 +95,7 @@ NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
 PCT_LIM_LONG        = 20      # % position limit long
 PCT_LIM_SHORT       = 20 # % position limit short
-PCT_QTY_BASE        = 20 # pct order qty in bps as pct of acct on each order
+PCT_QTY_BASE        = 20/2 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =  0.25      # Minimum time between loops
 RISK_CHARGE_VOL     =   250*4  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24

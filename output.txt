@@ -1,0 +1,339 @@
+ * Serving Flask app "real_poc" (lazy loading)
+ * Environment: production
+   WARNING: This is a development server. Do not use it in a production deployment.
+   Use a production WSGI server instead.
+ * Debug mode: off
+only 1 account! ok!
+equity usd rounded 193.4
+38
+38
+-98
+size0: 2.66
+size: 2.66
+usd_short: -22
+equity
+0.030865454
+self diff3 : 0
+only 1 account! ok!
+equity usd rounded 193.2
+38
+38
+-98
+size0: 2.6799999999999997
+size: 2.6799999999999997
+usd_short: -22
+equity
+0.030865454
+********************************************************************
+Start Time:        2020-03-23 13:29:13
+Current Time:      2020-03-23 13:29:17
+Days:              0.0
+Hours:             0.0
+Spot Price:        6261.09
+Equity ($):         193.29
+P&L ($)              -0.14
+Equity (BTC):       0.0309
+P&L (BTC)           0.0000
+
+Positions        Contracts
+BTC-25SEP20            -69
+BTC-26JUN20            -69
+BTC-PERPETUAL          138
+ 
+Position total delta: 0$
+Skews: 1.0
+Position exposure: 2760$
+
+Vols               %
+BTC-25SEP20      150
+BTC-26JUN20      150
+BTC-PERPETUAL    150
+btc              150
+ 
+ 
+ 
+{'BTC-25SEP20': 0.207, 'BTC-26JUN20': 0.207, 'BTC-PERPETUAL': 1}
+{'BTC-25SEP20': 1, 'BTC-26JUN20': 1, 'BTC-PERPETUAL': 0.414}
+{'BTC-25SEP20': {'arb': 0.9999601609497629, 'long': 'BTC-25SEP20', 'short': 'BTC-PERPETUAL'}}
+{'BTC-25SEP20': {'arb': 0.9999601609497629, 'long': 'BTC-25SEP20', 'short': 'BTC-PERPETUAL'}, 'BTC-26JUN20': {'arb': 0.9962573658225832, 'long': 'BTC-26JUN20', 'short': 'BTC-PERPETUAL'}}
+BTC-PERPETUAL
+6281.25
+6055.911996079
+BTC-25SEP20
+6292.25
+6005.166427443
+BTC-26JUN20
+6266.0
+5990.882449952
+buyperp False
+actuallyBuyingPerp: True
+pos size selling: 0
+order size selling: 0.0
+ratio: 0.8246119379100656 & diffratio: 4.1230596895503275
+fut BTC-25SEP20
+bids 2
+asks 0
+fut BTC-25SEP20
+bids 2
+asks 0
+fut BTC-25SEP20
+6299.5
+4
+3.0
+3.0
+3.0
+3.0
+True
+self.imselling[BTC-PERPETUAL]
+False
+self.imbuying[BTC-PERPETUAL]
+False
+4
+3.0
+3.0
+3.0
+3.0
+True
+self.imselling[BTC-PERPETUAL]
+False
+self.imbuying[BTC-PERPETUAL]
+False
+fut BTC-26JUN20
+bids 2
+asks 0
+fut BTC-26JUN20
+bids 2
+asks 0
+fut BTC-26JUN20
+6273.25
+4
+3.0
+3.0
+3.0
+3.0
+True
+self.imselling[BTC-PERPETUAL]
+False
+self.imbuying[BTC-PERPETUAL]
+False
+4
+3.0
+3.0
+3.0
+3.0
+True
+self.imselling[BTC-PERPETUAL]
+False
+self.imbuying[BTC-PERPETUAL]
+False
+fut BTC-PERPETUAL
+bids 0
+asks 2
+fut BTC-PERPETUAL
+bids 0
+asks 2
+ 
+eps of perp before predictions: 0.0945256444040144
+eps after predictions: 0.0236314111010036
+ 
+fut BTC-PERPETUAL
+6281.5
+4
+3.0
+3.0
+3.0
+3.0
+ 
+predict_1: 0.5 & predict_5: 0.5
+qty of perp to sell before predictions: 3.0
+max_skew on btc-perp buy!
+max_skew on btc-perp sell!
+max_skew on btc-perp buy!
+max_skew on btc-perp sell!
+4
+3.0
+3.0
+3.0
+3.0
+ 
+predict_1: 0.5 & predict_5: 0.5
+qty of perp to sell before predictions: 3.0
+max_skew on btc-perp buy!
+max_skew on btc-perp sell!
+max_skew on btc-perp buy!
+max_skew on btc-perp sell!
+{'BTC-25SEP20': {'arb': 1.0029876907142572, 'long': 'BTC-PERPETUAL', 'short': 'BTC-25SEP20'}, 'BTC-26JUN20': {'arb': 0.9962573658225832, 'long': 'BTC-26JUN20', 'short': 'BTC-PERPETUAL'}}
+{'BTC-25SEP20': {'arb': 1.0029876907142572, 'long': 'BTC-PERPETUAL', 'short': 'BTC-25SEP20'}, 'BTC-26JUN20': {'arb': 0.9968958930276982, 'long': 'BTC-26JUN20', 'short': 'BTC-PERPETUAL'}}
+BTC-PERPETUAL
+6292.75
+6055.911996079
+BTC-25SEP20
+6301.5
+6005.166427443
+BTC-26JUN20
+6276.5
+5990.882449952
+buyperp False
+actuallyBuyingPerp: True
+pos size selling: 0
+order size selling: 0.0
+ratio: 0.8246119379100656 & diffratio: 4.1230596895503275
+fut BTC-25SEP20
+bids 2
+asks 0
+fut BTC-25SEP20
+bids 2
+asks 0
+fut BTC-25SEP20
+6302.0
+4
+3.0
+3.0
+3.0
+3.0
+True
+self.imselling[BTC-PERPETUAL]
+False
+self.imbuying[BTC-PERPETUAL]
+False
+4
+3.0
+3.0
+3.0
+3.0
+True
+self.imselling[BTC-PERPETUAL]
+False
+self.imbuying[BTC-PERPETUAL]
+False
+fut BTC-26JUN20
+bids 2
+asks 0
+fut BTC-26JUN20
+bids 2
+asks 0
+fut BTC-26JUN20
+6277.0
+4
+3.0
+3.0
+3.0
+3.0
+True
+self.imselling[BTC-PERPETUAL]
+False
+self.imbuying[BTC-PERPETUAL]
+False
+4
+3.0
+3.0
+3.0
+3.0
+True
+self.imselling[BTC-PERPETUAL]
+False
+self.imbuying[BTC-PERPETUAL]
+False
+fut BTC-PERPETUAL
+bids 0
+asks 2
+fut BTC-PERPETUAL
+bids 0
+asks 2
+ 
+eps of perp before predictions: 0.09800546612012151
+eps after predictions: 0.024501366530030377
+ 
+fut BTC-PERPETUAL
+6286.25
+4
+3.0
+3.0
+3.0
+3.0
+ 
+predict_1: 0.5 & predict_5: 0.5
+qty of perp to sell before predictions: 3.0
+max_skew on btc-perp buy!
+max_skew on btc-perp sell!
+max_skew on btc-perp buy!
+max_skew on btc-perp sell!
+4
+3.0
+3.0
+3.0
+3.0
+ 
+predict_1: 0.5 & predict_5: 0.5
+qty of perp to sell before predictions: 3.0
+max_skew on btc-perp buy!
+max_skew on btc-perp sell!
+max_skew on btc-perp buy!
+max_skew on btc-perp sell!
+self diff3 : 0
+only 1 account! ok!
+equity usd rounded 193.3
+38
+38
+-98
+size0: 2.6700000000000017
+size: 2.6700000000000017
+usd_short: -22
+equity
+0.030765349
+********************************************************************
+Start Time:        2020-03-23 13:29:13
+Current Time:      2020-03-23 13:29:56
+Days:              0.0
+Hours:             0.0
+Spot Price:        6286.17
+Equity ($):         193.38
+P&L ($)              -0.05
+Equity (BTC):       0.0308
+P&L (BTC)          -0.0001
+
+Positions        Contracts
+BTC-25SEP20            -69
+BTC-26JUN20            -69
+BTC-PERPETUAL          138
+ 
+Position total delta: 0$
+Skews: 1.0
+Position exposure: 2760$
+recent pnl: -0.04324423558465085 avg avg pnl: -0.04345085041479198 min: -0.048250533388106476 max: -0.041151600446164616
+tps: 0 & sls: 0
+
+Vols               %
+BTC-25SEP20      150
+BTC-26JUN20      150
+BTC-PERPETUAL    150
+btc              150
+ 
+ 
+ 
+{'BTC-25SEP20': 0.207, 'BTC-26JUN20': 0.207, 'BTC-PERPETUAL': 1}
+{'BTC-25SEP20': 1, 'BTC-26JUN20': 1, 'BTC-PERPETUAL': 0.414}
+{'BTC-25SEP20': {'arb': 1.0025465541938565, 'long': 'BTC-PERPETUAL', 'short': 'BTC-25SEP20'}, 'BTC-26JUN20': {'arb': 0.9968958930276982, 'long': 'BTC-26JUN20', 'short': 'BTC-PERPETUAL'}}
+{'BTC-25SEP20': {'arb': 1.0025465541938565, 'long': 'BTC-PERPETUAL', 'short': 'BTC-25SEP20'}, 'BTC-26JUN20': {'arb': 0.9974931359675301, 'long': 'BTC-26JUN20', 'short': 'BTC-PERPETUAL'}}
+BTC-PERPETUAL
+6264.25
+6055.911996079
+BTC-25SEP20
+6288.5
+6005.166427443
+BTC-26JUN20
+6252.75
+5990.882449952
+buyperp False
+actuallyBuyingPerp: True
+pos size selling: 0
+order size selling: 0.0
+ratio: 0.8246119379100656 & diffratio: 4.1230596895503275
+fut BTC-25SEP20
+bids 2
+asks 0
+fut BTC-25SEP20
+bids 2
+asks 0
+fut BTC-25SEP20
+6278.25

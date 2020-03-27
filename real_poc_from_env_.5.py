@@ -9,6 +9,7 @@ from utils          import ( get_logger, lag, print_dict, print_dict_of_dicts, s
                              ticksize_ceil, ticksize_floor, ticksize_round )
 import quantstats as qs
 import _thread
+import os
 import ccxt
 from flask import Flask
 from flask import flash, render_template, request, redirect
@@ -74,11 +75,10 @@ args    = parser.parse_args()
 URL     = 'https://www.deribit.com'#ctrl+h!!!!!
 skews = []
 
-KEY2 = "C1UGHf6-"
-SECRET2 = "qNYfTPo6-5GD8YhKCTJvPsW3_t-dkRq9rbRltMaVqqM"
-
-KEY     = 'lGScHgoJ'
-SECRET  = 'hpbl22Nb9pf_mwTZ8mSsfG1U9d2aQ9cztlhYDYVelO8'
+KEY2 = os.environ['KEY2']
+SECRET2 = os.environ['SECRET2']
+KEY     = os.environ['KEY']
+SECRET  = os.environ['SECRET']
 ULTRACONSERVATIVE = True
 BP                  = 1e-4      # one basis point
 BTC_SYMBOL          = 'btc'
@@ -91,14 +91,14 @@ FORECAST_RETURN_CAP = 100        # cap on returns for vol estimate
 LOG_LEVEL           = logging.INFO
 MIN_ORDER_SIZE      = 10
 MAX_LAYERS          =  2# max orders to layer the ob with on each side
-MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
+MKT_IMPACT          =  0      # base 1-sided spread between bid/offer
 NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
 PCT_LIM_LONG        = 20      # % position limit long
 PCT_LIM_SHORT       = 20 # % position limit short
-PCT_QTY_BASE        = 20 # pct order qty in bps as pct of acct on each order
+PCT_QTY_BASE        = 20/2.5/4 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =  0.25      # Minimum time between loops
-RISK_CHARGE_VOL     =   250*4  # vol risk charge in bps per 100 vol
+RISK_CHARGE_VOL     =   140*8  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
 WAVELEN_MTIME_CHK   = 15        # time in seconds between check for file change
@@ -735,9 +735,7 @@ class MarketMaker( object ):
             print('asks ' + str(nasks))    
             nasks = int (nasks)
             nbids = int (nbids)
-            if self.positionGains[fut] == True:
-                nasks = 2
-                nbids = 2
+            
             place_bids = nbids > 0
             place_asks = nasks > 0
             #buy bid sell ask
@@ -769,7 +767,7 @@ class MarketMaker( object ):
                 print(' ')
                 print('eps of perp before predictions: ' + str(eps))
 
-            eps = eps * self.predict_1 * self.predict_5
+            eps = eps * ((self.predict_1 * self.predict_5) * (self.predict_1 * self.predict_5))
             if fut == 'BTC-PERPETUAL':
                 print('eps after predictions: ' + str(eps))
                 print(' ')
@@ -809,9 +807,60 @@ class MarketMaker( object ):
                 for p in self.client.positions():
                     if p['instrument'] == fut:
                         avg = p['averagePrice']
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
+                print('fut ' + fut)
+                print(mid)
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+                
+                ords        = self.client.getopenorders( fut )
+                cancel_oids = []
+                bid_ords    = ask_ords = []
+                if place_bids:
+                    
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    bids1    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
+
+                    bids1[ 0 ]   = ticksize_floor( bids1[ 0 ], tsz )
+                    
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                    asks1    = [ ask0 * riskfac ** i for i in range( 1, int(nasks) + 1 ) ]
+
+                    asks1[ 0 ]   = ticksize_ceil( asks1[ 0 ], tsz  )
+                
+                
                 bbo     = self.getbidsandasks( fut , avg)
                 bids = bbo['bids']
                 asks = bbo['asks']
+                asksn = []
+                bidsn = []
+                askso = asks
+                bidso = asks
+                if place_asks:
+                    asksn.append(asks1[0])
+                    asksn.append(asks1[1])
+                    nasks = nasks * 2
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                asksn.append(askso[0])
+                asksn.append(askso[1])
+                asks = asksn
+                if place_bids:
+                    bidsn.append(bids1[0])
+                    bidsn.append(bids1[1])
+                    nbids = nbids * 2
+                    len_bid_ords = min( len( bid_ords ), nbids )
+                bidsn.append(bidso[0])
+                asksn.append(bidso[1])
+                print(bidsn)
+                bids = bidsn
                 ords        = self.client.getopenorders( fut )
                 cancel_oids = []
                 bid_ords    = ask_ords = []
@@ -868,10 +917,6 @@ class MarketMaker( object ):
                     print('-----')
                     print(fut)
                     print(self.positionGains[fut])
-                    if self.positionGains[fut] == True:
-
-                        if positionSize < 0:
-                            qty = 0.25 * positionSize * -1#len(self.futures)
 
                     if 'PERPETUAL' in fut and self.thearb > 1 and positionSize < 0:
                         qty = qty * 1.2#len(self.futures) 
@@ -892,25 +937,69 @@ class MarketMaker( object ):
                         print('predict_1: ' + str(p1) + ' & predict_5: ' + str(p5))
                         print('qty of perp to buy before predictions: ' + str(qty))
                     #qty = round(qty * (1/(math.sqrt(p1)*math.sqrt(p5))) / 2)
-                    if fut == 'BTC-PERPETUAL':
+                    if fut == 'BTC-26JUN20':
                         print('qty after predictions: ' + str(qty))
                         print(' ' )
                     positionSize = positionSize * 10
                     #print('pos size: ' + str(positionSize))
+                    if qty < 0:
+                        qty = qty * -1
+                    if qty < 1:
+                        qty = 1
                     if qty * 10 > self.maxqty:
                         self.maxqty = qty * 10
                         print('---')
                         print('self maxqty' + str(self.maxqty))
+                    qtyold = qty
+                    if positionSize < 0:
+                        #len(self.futures)
+                        if qtyold > qty:
+                            qty = qtyold
+                        if self.positionGains[fut] == True:
+                            qty = qty * 1.25
+                        else:
+                            qty = qty * 0.25
+                        if qty < 1:
+                            qty = 1
+                        pps = 0
+                        for p in self.positions:
+                            pps = pps + self.positions[p]['size']
+                        if pps  < 0:
+                            ps = pps * -1
+                        else:
+                            ps = pps
+                        ps = ps / len(self.futures) / 2
+                        if ps < 1:
+                            ps = 1
+                        qty = ps
+
+                        if qty > self.maxqty / 10 * 2.5 * 5:
+                            if self.maxqty / 10 * 2.5 * 5 < ps:
+                                qty = self.maxqty / 10 * 2.5 * 5
+                            else:
+                                qty = ps
                     if positionSize > 0:
                         print((qty * 10 * MAX_LAYERS) / 2 + positionSize)
                         print('maxqty: ' + str(self.maxqty))             
-                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5)):
+                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 5)):
                             if self.positions[fut]['size'] > 0:
                                 print('max skew on buy')
+                                len_bid_ords = 0
+                                try:
+                                    oid = bid_ords[ i ][ 'orderId' ]
+                                    cancel_oids.append( oid )
+                                except:
+                                    abc123 = 1
                                 gogo = False
-                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 2)):
+                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 5 * 2)):
                             if self.positions[fut]['size'] < 0:
                                 print('max skew on buy')
+                                try:
+                                    oid = bid_ords[ i ][ 'orderId' ]
+                                    cancel_oids.append( oid )
+                                except:
+                                    abc123 = 1
+                                len_bid_ords = 0
                                 gogo = False
                     print(gogo)
                     if self.imselling[fut] == True:
@@ -920,63 +1009,66 @@ class MarketMaker( object ):
                     if i < len_bid_ords and gogo == True:    
 
                         
-                        #try:
-                            #oid = bid_ords[ i ][ 'orderId' ]
-                            #self.client.edit( oid, qty, prc )
-                        #except (SystemExit, KeyboardInterrupt):
-                            #raise
-                        #except:
                         try:
-                            if self.arbmult[fut]['arb'] >= 1 and self.positions[fut]['size'] + qty / 2 < 0:
-                                self.client.buy( fut, qty, prc, 'true' )
-                            if self.arbmult[fut]['arb'] <= 1 and 'PERPETUAL' not in fut or self.arbmult[fut]['arb'] > 1 and 'PERPETUAL' in fut:
-                                self.client.buy(  fut, qty, prc, 'true' )
-                            #cancel_oids.append( oid )
-                            #self.logger.warn( 'Edit failed for %s' % oid )
+                            oid = bid_ords[ i ][ 'orderId' ]
+                            self.client.edit( oid, qty, prc )
                         except (SystemExit, KeyboardInterrupt):
                             raise
-                        except Exception as e:
-                            print(e)
-                            if 'BTC-PERPETUAL' in str(e):
-                                try:
+                        except:
+                            try:
 
-                                    positionSize = 0
-                                    for p in self.positions:
-                                        positionSize = positionSize + self.positions[p]['size']
-                                    positionSize = positionSize * 10
-                                    for k in self.arbmult:
-                                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5)) and self.positions[fut]['size'] > 0:
-                                            
-                                            print('max_skew on btc-perp buy!')
-                                        elif (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2 * 1.25)) and self.positions[fut]['size'] < 0:
-                                            
-                                            print('max_skew on btc-perp buy!')    
-                                        elif nbids > 0:
-                                            if self.imselling['BTC-PERPETUAL'] == False:
-                                                if self.arbmult[k]['arb'] >= 1  or self.positions['BTC-PERPETUAL']['size'] < 0:
-                                                    
-                                                    self.client.buy(  fut, qty, prc, 'true' )
-                                        print((qty * 10 * MAX_LAYERS) / 2 - positionSize)
-                                        if (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2.5)) and self.positions[fut]['size'] < 0:
-                                            
-                                            print('max_skew on btc-perp sell!')
-                                        elif (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2 * 1.25)) and self.positions[fut]['size'] > 0:
-                                            
-                                            print('max_skew on btc-perp sell!')    
-                                        elif nasks > 0:
-                                            print(self.imbuying['BTC-PERPETUAL'])
-                                            if self.imbuying['BTC-PERPETUAL'] == False:
-                                                print(self.arbmult[k]['arb'] )
-                                                if self.arbmult[k]['arb'] <= 1  or self.positions['BTC-PERPETUAL']['size'] > 0:
-                                                
-                                                    self.client.sell(  fut, qty, prc, 'true' )
-                                        
+                                if self.arbmult[fut]['arb'] >= 1 and positionSize - qty /  2<= 0:
+                                    self.client.buy( fut, qty, prc, 'true' )
+                                    oid = bid_ords[ i ][ 'orderId' ]
+                                    cancel_oids.append( oid )
 
-                                except Exception as e:
-                                    print(e)
-                                    #cancel_oids.append( oid )
-                                    self.logger.warn( 'Bid order failed: %s bid for %s'
-                                            % ( prc, qty ))
+                                if self.arbmult[fut]['arb'] <= 1 and  positionSize - qty /  2<= 0:
+                                    self.client.buy(  fut, qty, prc, 'true' )
+                                    oid = bid_ords[ i ][ 'orderId' ]
+                                    cancel_oids.append( oid )
+                                #self.logger.warn( 'Edit failed for %s' % oid )
+                            except (SystemExit, KeyboardInterrupt):
+                                raise
+                            except Exception as e:
+                                print(e)
+                                if 'BTC-PERPETUAL' in str(e) and i <= 1:
+                                    try:
+
+                                        positionSize = 0
+                                        for p in self.positions:
+                                            positionSize = positionSize + self.positions[p]['size']
+                                        positionSize = positionSize * 10
+                                        if positionSize < 0:
+                                            positionSize = positionSize * -1
+                                        for k in self.arbmult:
+                                            if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 5)) and self.positions[fut]['size'] > 0:
+                                                len_bid_ords = 0
+                                                try:
+                                                    oid = bid_ords[ i ][ 'orderId' ]
+                                                    cancel_oids.append( oid )
+                                                except:
+                                                    abc123 = 1
+                                                print('max_skew on btc-perp buy!')
+                                            elif (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2 * 1.25 * 5)) and self.positions[fut]['size'] < 0:
+                                                len_bid_ords = 0
+                                                try:
+                                                    oid = bid_ords[ i ][ 'orderId' ]
+                                                    cancel_oids.append( oid )
+                                                except:
+                                                    abc123 = 1
+                                                print('max_skew on btc-perp buy!')    
+                                            elif nbids > 0:
+                                                if self.imselling['BTC-PERPETUAL'] == False:
+                                                    if self.arbmult[k]['arb'] >= 1  or self.positions['BTC-PERPETUAL']['size'] < 0:
+                                                        oid = bid_ords[ i ][ 'orderId' ]
+                                    
+                                                        self.client.buy(  fut, qty, prc, 'true' )
+                                                        cancel_oids.append( oid )
+                                    except Exception as e:
+                                        print(e)
+                                        #cancel_oids.append( oid )
+                                        self.logger.warn( 'Bid order failed: %s bid for %s'
+                                                % ( prc, qty ))
 
                     elif gogo == True:
                         print('self.imselling[BTC-PERPETUAL]')
@@ -991,30 +1083,45 @@ class MarketMaker( object ):
                             #abc = 1
                         try:
                             
-                            if self.arbmult[fut]['arb'] >= 1 and self.positions[fut]['size'] - qty /  2<= 0:
+                            if self.arbmult[fut]['arb'] >= 1 and positionSize - qty /  2<= 0:
                                 self.client.buy( fut, qty, prc, 'true' )
+                                oid = bid_ords[ i ][ 'orderId' ]
+                                cancel_oids.append( oid )
 
-
-                            if self.arbmult[fut]['arb'] <= 1:
+                            if self.arbmult[fut]['arb'] <= 1 and positionSize - qty /  2<= 0:
                                 self.client.buy(  fut, qty, prc, 'true' )
-
+                                oid = bid_ords[ i ][ 'orderId' ]
+                                cancel_oids.append( oid )
 
                         except (SystemExit, KeyboardInterrupt):
                             raise
                         except Exception as e:
-                            if 'BTC-PERPETUAL' in str(e):
+                            if 'BTC-PERPETUAL' in str(e) and i <= 1:
                                 try:
 
                                     positionSize = 0
                                     for p in self.positions:
                                         positionSize = positionSize + self.positions[p]['size']
                                     positionSize = positionSize * 10
+                                    if positionSize < 0:
+                                            positionSize = positionSize * -1
+                                        
                                     for k in self.arbmult:
-                                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5)) and self.positions[fut]['size'] > 0:
-                                            
+                                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 5)) and self.positions[fut]['size'] > 0:
+                                            len_bid_ords = 0
+                                            try:
+                                                oid = bid_ords[ i ][ 'orderId' ]
+                                                cancel_oids.append( oid )
+                                            except:
+                                                abc123 = 1
                                             print('max_skew on btc-perp buy!')
-                                        elif (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2 * 1.25)) and self.positions[fut]['size'] < 0:
-                                            
+                                        elif (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2 * 1.25 * 5)) and self.positions[fut]['size'] < 0:
+                                            len_bid_ords = 0
+                                            try:
+                                                oid = bid_ords[ i ][ 'orderId' ]
+                                                cancel_oids.append( oid )
+                                            except:
+                                                abc123 = 1
                                             print('max_skew on btc-perp buy!')    
                                             
                                         elif nbids > 0:
@@ -1022,23 +1129,8 @@ class MarketMaker( object ):
                                                 if self.arbmult[k]['arb'] >= 1  or self.positions['BTC-PERPETUAL']['size'] < 0:
                                                     
                                                     self.client.buy(  fut, qty, prc, 'true' )
-                                        print((qty * 10 * MAX_LAYERS) / 2 - positionSize)
-                                        if (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2.5)) and self.positions[fut]['size'] < 0:
-                                            
-                                            print('max_skew on btc-perp sell!')
-                                        elif (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2 * 1.25)) and self.positions[fut]['size'] > 0:
-                                            
-                                            print('max_skew on btc-perp sell!')  
-                                            
-                                        elif nasks > 0:
-                                            print(self.imbuying['BTC-PERPETUAL'])
-                                            if self.imbuying['BTC-PERPETUAL'] == False:
-                                                print(self.arbmult[k]['arb'] )
-                                                if self.arbmult[k]['arb'] <= 1 or self.positions['BTC-PERPETUAL']['size'] > 0:
-                                                
-                                                    self.client.sell(  fut, qty, prc, 'true' )
-                                        
-
+                                                    oid = bid_ords[ i ][ 'orderId' ]
+                                                    cancel_oids.append( oid )
                                 except Exception as e:
                                     print(e)
                                     #cancel_oids.append( oid )
@@ -1088,9 +1180,7 @@ class MarketMaker( object ):
                     positionSize = 0
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
-                    if self.positionGains[fut] == True:
-                        if positionSize > 0:
-                            qty = 0.25 * positionSize#len(self.futures)
+
                     if 'PERPETUAL' in fut and self.thearb < 1 and positionSize < 0: 
                         qty = qty * 1.2#len(self.futures)
                     elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize < 0:
@@ -1104,26 +1194,71 @@ class MarketMaker( object ):
                         p1 = 0.2
                     if p5 < 0.2:
                         p5 = 0.2
-                    if fut == 'BTC-PERPETUAL':
+                    if fut == 'BTC-26JUN20':
                         print(' ')
                         print('predict_1: ' + str(p1) + ' & predict_5: ' + str(p5))
                         print('qty of perp to sell before predictions: ' + str(qty))
                     #qty = round(qty * (1/(math.sqrt(p1)*math.sqrt(p5))) / 2)
                     positionSize = positionSize * 10
-                    #print('pos size: ' + str(positionSize))
+                    if qty < 0:
+                        qty = qty * -1
+                    if qty < 1:
+                        qty = 1
                     if qty * 10 > self.maxqty:
                         self.maxqty = qty * 10
                         print('---')
                         print('self maxqty' + str(self.maxqty))
+                    qtyold = qty
+                    if positionSize > 0:
+                        #len(self.futures)
+                        if qtyold > qty:
+                            qty = qtyold
+                        if self.positionGains[fut] == True:
+                            qty = qty * 1.25
+                        else:
+                            qty = qty * 0.25
+                        if qty < 1:
+                            qty = 1
+                        pps = 0
+                        for p in self.positions:
+                            pps = pps + self.positions[p]['size']
+                        if pps  < 0:
+                            ps = pps * -1
+                        else:
+                            ps = pps
+
+                        ps = ps / len(self.futures) / 2
+                        if ps < 1:
+                            ps = 1
+                        qty = ps
+                        if qty > self.maxqty / 10 * 2.5 * 5:
+                            if self.maxqty / 10 * 2.5 * 5 < ps:
+                                qty = self.maxqty / 10 * 2.5 * 5
+                            else:
+                                qty = ps
+                    #print('pos size: ' + str(positionSize))
+
                     if positionSize < 0:
 
 
                         print((qty * 10 * MAX_LAYERS) / 2 + positionSize * -1)
-                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty * 2.5)) and self.positions[fut]['size'] < 0:
+                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty * 2.5 * 5)) and self.positions[fut]['size'] < 0:
                             print('max skew on sell')
+                            try:
+                                oid = ask_ords[ i ][ 'orderId' ]
+                                cancel_oids.append( oid )
+                            except:
+                                abc123 = 1
+                            len_ask_ords = 0
                             gogo = False
-                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty * 2 * 1.25)) and self.positions[fut]['size'] > 0:
+                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty * 2 * 1.25 * 5)) and self.positions[fut]['size'] > 0:
                             print('max skew on sell')
+                            try:
+                                oid = ask_ords[ i ][ 'orderId' ]
+                                cancel_oids.append( oid )
+                            except:
+                                abc123 = 1
+                            len_ask_ords = 0
                             gogo = False
                     if  self.imbuying[fut] == True:
                         print(fut + ' fut true fut btc perp gogo false selling')
@@ -1131,72 +1266,79 @@ class MarketMaker( object ):
 
                     if i < len_ask_ords and gogo == True: 
                         
-                        #try:
-                          #  oid = ask_ords[ i ][ 'orderId' ]
-                          #  self.client.edit( oid, qty, prc )
-                        #except (SystemExit, KeyboardInterrupt):
-                            #raise
-                        #except:
                         try:
-                            if place_asks and i < nasks:
-                                if self.arbmult[fut]['arb'] >= 1 and self.positions[fut]['size'] + qty / 2< 0:
-                                    self.client.sell( fut, qty, prc, 'true' )
-                            if self.arbmult[fut]['arb'] <= 1 and 'PERPETUAL' not in fut or self.arbmult[fut]['arb'] > 1 and 'PERPETUAL' in fut:
-                                self.client.sell(  fut, qty, prc, 'true' )
-
-
-                            #cancel_oids.append( oid )
-                            #self.logger.warn( 'Sell Edit failed for %s' % oid )
+                            oid = ask_ords[ i ][ 'orderId' ]
+                            self.client.edit( oid, qty, prc )
                         except (SystemExit, KeyboardInterrupt):
                             raise
-                        except Exception as e:
-                            if 'BTC-PERPETUAL' in str(e):
-                                print('===')
-                                print(' ')
-                                print((qty * 10 * MAX_LAYERS) / 2 + positionSize)
-                                try:
-                                    positionSize = 0
-                                    for p in self.positions:
-                                        positionSize = positionSize + self.positions[p]['size']
-                                    positionSize = positionSize * 10
-                                    for k in self.arbmult:
-                                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5)) and self.positions[fut]['size'] > 0:
-                                            
-                                            print('max_skew on btc-perp buy!')
-                                        elif (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2 * 1.25)) and self.positions[fut]['size'] < 0:
-                                            
-                                            print('max_skew on btc-perp buy!')    
-                                            
-                                        elif nbids > 0:
-                                            if self.imselling['BTC-PERPETUAL'] == False:
-                                                if self.arbmult[k]['arb'] >= 1  or self.positions['BTC-PERPETUAL']['size'] < 0:
-                                                    
-                                                    self.client.buy(  fut, qty, prc, 'true' )
-                                        print((qty * 10 * MAX_LAYERS) / 2 - positionSize)
-                                        if (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2.5)) and self.positions[fut]['size'] < 0:
-                                            
-                                            print('max_skew on btc-perp sell!')
-                                        elif (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2 * 1.25)) and self.positions[fut]['size'] > 0:
-                                            
-                                            print('max_skew on btc-perp sell!')  
-                                            
-                                        elif nasks > 0:
-                                            print(self.imbuying['BTC-PERPETUAL'])
-                                            if self.imbuying['BTC-PERPETUAL'] == False:
-                                                print(self.arbmult[k]['arb'] )
-                                                if self.arbmult[k]['arb'] <= 1  or self.positions['BTC-PERPETUAL']['size'] > 0:
-                                                
-                                                    self.client.sell(  fut, qty, prc, 'true' )
-                                        
+                        except:
+                            try:
+                                if place_asks and i < nasks:
+                                    if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2>= 0:
+                                        self.client.sell( fut, qty, prc, 'true' )
+                                        oid = ask_ords[ i ][ 'orderId' ]
+                                        cancel_oids.append( oid )
+                                if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2>= 0 and 'PERPETUAL' not in fut or self.arbmult[fut]['arb'] > 1 and 'PERPETUAL' in fut:
+                                    self.client.sell(  fut, qty, prc, 'true' )
+                                    oid = ask_ords[ i ][ 'orderId' ]
+                                    cancel_oids.append( oid )
 
-                                except Exception as e:
-                                    print(e)
-                                   # cancel_oids.append( oid )
-                            
-                                   # self.logger.warn( 'Sell Edit failed for %s' % oid )
-                                    self.logger.warn( 'Offer order failed: %s at %s'
-                                                    % ( qty, prc ))
-                            #cancel_oids.append( oid )
+
+                                #cancel_oids.append( oid )
+                                #self.logger.warn( 'Sell Edit failed for %s' % oid )
+                            except (SystemExit, KeyboardInterrupt):
+                                raise
+                            except Exception as e:
+                                if 'BTC-PERPETUAL' in str(e) and i <= 1:
+
+                                    print('===')
+                                    print(' ')
+                                    print((qty * 10 * MAX_LAYERS) / 2 + positionSize)
+                                    try:
+                                        positionSize = 0
+                                        for p in self.positions:
+                                            positionSize = positionSize + self.positions[p]['size']
+                                        positionSize = positionSize * 10
+                                        if positionSize < 0:
+                                            positionSize = positionSize * -1
+                                        
+                                        for k in self.arbmult:
+                                            print((qty * 10 * MAX_LAYERS) / 2 - positionSize)
+                                            if (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2.5 * 5)) and self.positions[fut]['size'] < 0:
+                                                len_ask_ords = 0
+                                                try:
+                                                    oid = ask_ords[ i ][ 'orderId' ]
+                                                    cancel_oids.append( oid )
+                                                except:
+                                                    abc123 = 1
+                                                print('max_skew on btc-perp sell!')
+                                            elif (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2 * 1.25 * 5)) and self.positions[fut]['size'] > 0:
+                                                len_ask_ords = 0
+                                                try:
+                                                    oid = ask_ords[ i ][ 'orderId' ]
+                                                    cancel_oids.append( oid )
+                                                except:
+                                                    abc123 = 1
+                                                print('max_skew on btc-perp sell!')  
+                                                
+                                            elif nasks > 0:
+                                                print(self.imbuying['BTC-PERPETUAL'])
+                                                if self.imbuying['BTC-PERPETUAL'] == False:
+                                                    print(self.arbmult[k]['arb'] )
+                                                    if self.arbmult[k]['arb'] <= 1  or self.positions['BTC-PERPETUAL']['size'] > 0:
+                                                    
+                                                        self.client.sell(  fut, qty, prc, 'true' )
+                                                        oid = ask_ords[ i ][ 'orderId' ]
+                                                        cancel_oids.append( oid )
+
+                                    except Exception as e:
+                                        print(e)
+                                       # cancel_oids.append( oid )
+                                
+                                       # self.logger.warn( 'Sell Edit failed for %s' % oid )
+                                        self.logger.warn( 'Offer order failed: %s at %s'
+                                                        % ( qty, prc ))
+                                #cancel_oids.append( oid )
 
 
                     elif gogo == True:
@@ -1208,42 +1350,45 @@ class MarketMaker( object ):
                             #print('edit error')
                             #abc = 1
                         try:
-                            if self.arbmult[fut]['arb'] >= 1:
+                            if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2 >= 0:
                                 self.client.sell( fut, qty, prc, 'true' )
+                                oid = ask_ords[ i ][ 'orderId' ]
+                                cancel_oids.append( oid )
 
-
-                            if self.arbmult[fut]['arb'] <= 1 and self.positions[fut]['size'] + qty / 2 >= 0:
+                            if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2 >= 0:
                                 self.client.sell(  fut, qty, prc, 'true' )
-
+                                oid = ask_ords[ i ][ 'orderId' ]
+                                cancel_oids.append( oid )
                         except (SystemExit, KeyboardInterrupt):
                             raise
                         except Exception as e:
-                            if 'BTC-PERPETUAL' in str(e):
+                            if 'BTC-PERPETUAL' in str(e) and i <= 1:
                                 try:
 
                                     positionSize = 0
                                     for p in self.positions:
                                         positionSize = positionSize + self.positions[p]['size']
                                     positionSize = positionSize * 10
+                                    if positionSize < 0:
+                                            positionSize = positionSize * -1
+                                        
                                     for k in self.arbmult:
-                                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5)) and self.positions[fut]['size'] > 0:
-                                            
-                                            print('max_skew on btc-perp buy!')
-                                        elif (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2 * 1.25)) and self.positions[fut]['size'] < 0:
-                                            
-                                            print('max_skew on btc-perp buy!')    
-                                            
-                                        elif nbids > 0:
-                                            if self.imselling['BTC-PERPETUAL'] == False:
-                                                if self.arbmult[k]['arb'] >= 1  or self.positions['BTC-PERPETUAL']['size'] < 0:
-                                                    
-                                                    self.client.buy(  fut, qty, prc, 'true' )
                                         print((qty * 10 * MAX_LAYERS) / 2 - positionSize)
-                                        if (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2.5)) and self.positions[fut]['size'] < 0:
-                                            
+                                        if (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2.5 * 5)) and self.positions[fut]['size'] < 0:
+                                            len_ask_ords = 0
+                                            try:
+                                                oid = ask_ords[ i ][ 'orderId' ]
+                                                cancel_oids.append( oid )
+                                            except:
+                                                abc123 = 1
                                             print('max_skew on btc-perp sell!')
-                                        elif (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2 * 1.25)) and self.positions[fut]['size'] > 0:
-                                            
+                                        elif (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2 * 1.25 * 5)) and self.positions[fut]['size'] > 0:
+                                            len_ask_ords = 0
+                                            try:
+                                                oid = ask_ords[ i ][ 'orderId' ]
+                                                cancel_oids.append( oid )
+                                            except:
+                                                abc123 = 1
                                             print('max_skew on btc-perp sell!')  
                                             
                                         elif nasks > 0:
@@ -1251,9 +1396,9 @@ class MarketMaker( object ):
                                             if self.imbuying['BTC-PERPETUAL'] == False:
                                                 print(self.arbmult[k]['arb'] ) 
                                                 if self.arbmult[k]['arb'] <= 1  or self.positions['BTC-PERPETUAL']['size'] > 0:
-                                                
+                                                    oid = ask_ords[ i ][ 'orderId' ]
                                                     self.client.sell(  fut, qty, prc, 'true' )
-                                        
+                                                    cancel_oids.append( oid )
 
 
                                 except Exception as e:
@@ -1263,10 +1408,10 @@ class MarketMaker( object ):
                                                 % ( qty, prc ))
 
 
-            #if nbids < len( bid_ords ):
-            #    cancel_oids += [ o[ 'orderId' ] for o in bid_ords[ nbids : ]]
-            #if nasks < len( ask_ords ):
-                #cancel_oids += [ o[ 'orderId' ] for o in ask_ords[ nasks : ]]
+            if nbids < len( bid_ords ):
+                cancel_oids += [ o[ 'orderId' ] for o in bid_ords[ nbids : ]]
+            if nasks < len( ask_ords ):
+                cancel_oids += [ o[ 'orderId' ] for o in ask_ords[ nasks : ]]
 
             for oid in cancel_oids:
                 #print(oid)
@@ -1275,7 +1420,7 @@ class MarketMaker( object ):
                 except:
                     self.logger.warn( 'Order cancellations failed: %s' % oid )
                                         
-    
+
     def restart( self ):        
         try:
             
@@ -1482,7 +1627,7 @@ class MarketMaker( object ):
             self.cancelorder = self.cancelorder - 1
             if self.cancelorder <= 0:
                 self.cancelorder = 2
-                self.client.cancelall()
+                #self.client.cancelall()
             positionSize = 0
             positionPos = 0
 
@@ -1521,249 +1666,7 @@ class MarketMaker( object ):
                 if self.positions['BTC-PERPETUAL']['size'] > 0:
                     actuallyBuyingPerp = True
             print('actuallyBuyingPerp: ' + str(actuallyBuyingPerp))
-            try:
-                for p in self.client.positions():
-                    self.imselling[p['instrument']] = False
-                    self.imbuying[p['instrument']] = False
-                if positionSize >= 0:
-                    if buyPerp == False and actuallyBuyingPerp == True:
-                        num = len(self.futures)-1
-                        print('pos size selling: ' + str(positionSize))
-                        size = positionSize / num
-                        print('order size selling: ' + str(size))
-                        if size < 0:
-                            size = size * -1
-                        for p in self.client.positions():
-                            #if 'PERPETUAL' not in p['instrument']:
-                             #   self.imselling[p['instrument']] = True
-                            if size > 0:
-                                print('tf ' + p['instrument'])
-                                bbo = self.getbidsandasks(p['instrument'], p['averagePrice'])
-                                if positionPrices[p['instrument']]:
-                                    bbo     = self.get_bbo( p['instrument'] )
-                                    bid_mkt = bbo[ 'bid' ]
-                                    ask_mkt = bbo[ 'ask' ]
-                                    mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
-                                    if 'PERPETUAL' not in p['instrument']:
-                                       # self.imselling[p['instrument']] = True
-                                        
-                                        _thread.start_new_thread(marketThread,(self, p['instrument'], 'sell', size / 6))
-                                        bbo = self.getbidsandasks(p['instrument'], p['averagePrice'])
 
-                                        #self.client.sell(  p['instrument'], size/3, bbo['asks'][1], 'true' )    
-                                        #self.client.sell(  p['instrument'], size/3, bbo['asks'][0], 'true' )    
-                                        #self.client.sell(  p['instrument'], size/3, p['averagePrice'], 'true' )
-                                if not positionPrices[p['instrument']]:
-                                    bbo     = self.get_bbo( p['instrument'] )
-                                    bid_mkt = bbo[ 'bid' ]
-                                    ask_mkt = bbo[ 'ask' ]
-                                    mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
-                                    if 'PERPETUAL' not in p['instrument']:
-
-
-                                      #  self.imselling[p['instrument']] = True
-                                        _thread.start_new_thread(marketThread,(self, p['instrument'], 'sell', size / 6))
-                                        bbo = self.getbidsandasks(p['instrument'], p['averagePrice'])
-                                        #self.client.sell(  p['instrument'], size/3, bbo['asks'][1], 'true' )    
-                                        #self.client.sell(  p['instrument'], size/3, bbo['asks'][0], 'true' )    
-                                        #self.client.sell(  p['instrument'], size/3, p['averagePrice'], 'true' )
-                            else:
-
-                                self.imselling[p['instrument']] = False      
-                    elif buyPerp == True and actuallyBuyingPerp == True:
-                        num = 1
-                        size = positionSize / num
-
-                        print('pos size selling: ' + str(positionSize))
-                        size = positionSize / num
-                        print('order size selling: ' + str(size))
-                       # self.imselling['BTC-PERPETUAL'] = True
-                        if size < 0:
-                            size = size * -1
-                        if size > 0:
-
-#                            self.imselling['BTC-PERPETUAL'] = True
-                            for p in self.client.positions():
-                                if p['instrument'] == 'BTC-PERPETUAL':
-                                    bbo = self.getbidsandasks(p['instrument'], p['averagePrice'])
-                                    _thread.start_new_thread(marketThread,(self, 'BTC-PERPETUAL', 'sell', size / 6))
-                                    
-                                    #self.client.sell(  'BTC-PERPETUAL', size/3, bbo['asks'][1], 'true' )    
-                                    #self.client.sell(  'BTC-PERPETUAL', size/3, bbo['asks'][0], 'true' )    
-                                    #self.client.sell(  'BTC-PERPETUAL', size/3, p['averagePrice'], 'true' )
-                                
-                        else:
-
-                            self.imselling['BTC-PERPETUAL'] = False
-                    if buyPerp == False and actuallyBuyingPerp == False:
-                        num = 1
-                        size = positionSize / num
-
-                        print('pos size selling: ' + str(positionSize))
-                        size = positionSize / num
-                        print('order size selling: ' + str(size))
-                     #   self.imselling['BTC-PERPETUAL'] = True
-                        if size < 0:
-                            size = size * -1
-                        if size > 0:
-                            
-                            for p in self.client.positions():
-                                if p['instrument'] == 'BTC-PERPETUAL':
-
-                                    _thread.start_new_thread(marketThread,(self, 'BTC-PERPETUAL', 'sell', size / 6))
-                                    bbo = self.getbidsandasks(p['instrument'], p['averagePrice'])
-                                    #self.client.sell('BTC-PERPETUAL', size/3, bbo['asks'][1], 'true' )    
-                                    #self.client.sell(  'BTC-PERPETUAL', size/3, bbo['asks'][0], 'true' )    
-                                    #self.client.sell(  'BTC-PERPETUAL', size/3, p['averagePrice'], 'true' )
-                            
-                        else:
-
-                            self.imselling['BTC-PERPETUAL'] = False
-
-                    elif buyPerp == True and actuallyBuyingPerp == False:
-                        num = len(self.futures)-1
-                        print('pos size selling: ' + str(positionSize))
-                        size = positionSize / num
-                        print('order size selling: ' + str(size))
-                      #  if 'PERPETUAL' not in p['instrument']:
-                       #     self.imselling[p['instrument']] = True
-                        if size < 0:
-                            size = size * -1
-                        for p in self.client.positions():
-                            if size > 0:
-                                print('tf ' + p['instrument'])
-                                print(positionPrices[p['instrument']] )
-
-                                if 'PERPETUAL' not in p['instrument']:
-                               #     self.imselling[p['instrument']] = True
-                                    
-                                    
-                                    _thread.start_new_thread(marketThread,(self, p['instrument'], 'sell', size / 6))
-                                    bbo = self.getbidsandasks('BTC-PERPETUAL', p['averagePrice'])
-                                    #self.client.sell('BTC-PERPETUAL', size/3, bbo['asks'][1], 'true' )    
-                                    #self.client.sell(  'BTC-PERPETUAL', size/3, bbo['asks'][0], 'true' )    
-                                    #self.client.sell(  'BTC-PERPETUAL', size/3, p['averagePrice'], 'true' )
-            
-                            else:
-
-                                self.imselling[p['instrument']] = False         
-                else:
-                    if buyPerp == False and actuallyBuyingPerp == True:
-                        num = len(self.futures)-1
-                        print('pos size selling: ' + str(positionSize))
-                        size = positionSize / num
-                        print('order size selling: ' + str(size))
-                        if size < 0:
-                            size = size * -1
-                        for p in self.client.positions():
-                            #if 'PERPETUAL' not in p['instrument']:
-                            #    self.imbuying[p['instrument']] = True
-                            if size > 0:
-                                print('tf ' + p['instrument'])
-                                if positionPrices[p['instrument']]:
-                                    bbo     = self.get_bbo( p['instrument'] )
-                                    bid_mkt = bbo[ 'bid' ]
-                                    ask_mkt = bbo[ 'ask' ]
-                                    mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
-                                    if 'PERPETUAL' not in p['instrument']:
-                                       # self.imbuying[p['instrument']] = True
-
-                                        
-                                        _thread.start_new_thread(marketThread,(self, p['instrument'], 'buy', size / 6))
-                                        bbo = self.getbidsandasks(p['instrument'], p['averagePrice'])
-                                        #self.client.buy(  p['instrument'], size/3, p['averagePrice'], 'true' )
-                                        #self.client.buy(  p['instrument'], size/3, bbo['bids'][0], 'true' )
-                                        #self.client.buy(  p['instrument'], size/3, bbo['bids'][1], 'true' )
-                                if not positionPrices[p['instrument']]:
-                                    bbo     = self.get_bbo( p['instrument'] )
-                                    bid_mkt = bbo[ 'bid' ]
-                                    ask_mkt = bbo[ 'ask' ]
-                                    mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
-                                    if 'PERPETUAL' not in p['instrument']:
-                                       # self.imbuying[p['instrument']] = True
-
-                                        _thread.start_new_thread(marketThread,(self, p['instrument'], 'buy', size / 6))
-                                        bbo = self.getbidsandasks(p['instrument'], p['averagePrice'])
-                                        #self.client.buy(  p['instrument'], size/3, p['averagePrice'], 'true' )
-                                        #self.client.buy(  p['instrument'], size/3, bbo['bids'][0], 'true' )
-                                        #self.client.buy(  p['instrument'], size/3, bbo['bids'][1], 'true' )
-                               
-                            else:
-
-                                self.imbuying[p['instrument']] = False      
-                    elif buyPerp == True and actuallyBuyingPerp == True:
-                        num = 1
-                        size = positionSize / num
-
-                        print('pos size selling: ' + str(positionSize))
-                        size = positionSize / num
-                        print('order size selling: ' + str(size))
-                       # self.imbuying['BTC-PERPETUAL'] = True
-                        if size < 0:
-                            size = size * -1
-                        if size > 0:
-                            
-
-                            for p in self.client.positions():
-                                if p['instrument'] == 'BTC-PERPETUAL':
-                                    _thread.start_new_thread(marketThread,(self, 'BTC-PERPETUAL', 'buy', size / 6))
-                                    bbo = self.getbidsandasks('BTC-PERPETUAL', p['averagePrice'])
-                                    #self.client.buy(  p['instrument'], size/3, p['averagePrice'], 'true' )
-                                    #self.client.buy(  p['instrument'], size/3, bbo['bids'][0], 'true' )
-                                    #self.client.buy(  p['instrument'], size/3, bbo['bids'][1], 'true' )
-                        else:
-
-                            self.imbuying['BTC-PERPETUAL'] = False
-                    if buyPerp == False and actuallyBuyingPerp == False:
-                        num = 1
-                        size = positionSize / num
-
-                        print('pos size selling: ' + str(positionSize))
-                        size = positionSize / num
-                        print('order size selling: ' + str(size))
-                        #self.imbuying['BTC-PERPETUAL'] = True
-                        if size < 0:
-                            size = size * -1
-                        if size > 0:
-                            
-                            for p in self.client.positions():
-                                if p['instrument'] == 'BTC-PERPETUAL':
-                                    _thread.start_new_thread(marketThread,(self, 'BTC-PERPETUAL', 'buy', size / 6))
-                                    bbo = self.getbidsandasks('BTC-PERPETUAL', p['averagePrice'])
-                                    #self.client.buy(  p['instrument'], size/3, p['averagePrice'], 'true' )
-                                    #self.client.buy(  p['instrument'], size/3, bbo['bids'][0], 'true' )
-                                    #self.client.buy(  p['instrument'], size/3, bbo['bids'][1], 'true' )
-
-                        else:
-
-                            self.imbuying['BTC-PERPETUAL'] = False
-
-                    elif buyPerp == True and actuallyBuyingPerp == False:
-                        num = len(self.futures)-1
-                        print('pos size selling: ' + str(positionSize))
-                        size = positionSize / num
-                        print('order size selling: ' + str(size))
-                       # if 'PERPETUAL' not in p['instrument']:
-                        #    self.imbuying[p['instrument']] = True
-                        if size < 0:
-                            size = size * -1
-                        for p in self.client.positions():
-                            if size > 0:
-                                print('tf ' + p['instrument'])
-                                print(positionPrices[p['instrument']] )
-                                if 'PERPETUAL' not in p['instrument']:
-                                  #  self.imbuying[p['instrument']] = True
-                                    _thread.start_new_thread(marketThread,(self, p['instrument'], 'buy', size / 6))
-                                    self.client.buy(  p['instrument'], size, p['averagePrice'], 'true' )
-                                    bbo = self.getbidsandasks(p['instrument'], p['averagePrice'])
-                                    #self.client.buy(  p['instrument'], size/3, p['averagePrice'], 'true' )
-                                    #self.client.buy(  p['instrument'], size/3, bbo['bids'][0], 'true' )
-                                    #self.client.buy(  p['instrument'], size/3, bbo['bids'][1], 'true' )
-                            else:
-
-                                self.imbuying[p['instrument']] = False  
-            except Exception as e:
-                print(e)
             self.lastposdiff = self.posdiff #300
             self.posdiff = positionPos #400
             ts = 0
@@ -2224,29 +2127,35 @@ class MarketMaker( object ):
                     print(e)
             else:
                 self.slsinarow = 0
-    @app.route('/predictions', methods=['POST'])
-    def set():
-        try:        
-            old1 = mmbot.predict_1
-            old5 = mmbot.predict_5
-            mmbot.predict_1 = float(request.form['1m'])
-            mmbot.predict_5 = float(request.form['5m'])
-            if mmbot.predict_1 > 1:
-                mmbot.predict_1 = old1
-            if mmbot.predict_5 > 1:
-                mmbot.predict_5 = old5
-            print(' ')
-            print('New predictions!')
-            print('Predict 1m: ' + str(mmbot.predict_1))
-            print('Predict 5m:' + str(mmbot.predict_5))
-            print(' ')
-            flash('Predictions updated!')
-            return ('200')
+    
+    def update_status( self ):
+        old1 = mmbot.predict_1
+        old5 = mmbot.predict_5
+        try:
+            resp = requests.get('http://jare.cloud:8089/predictions').json()
+            print(resp)
+            if resp != 500:
+                if '1m' in resp: 
+                    mmbot.predict_1 = float(resp['1m'].replace('"',""))
+                    mmbot.predict_5 = float(resp['5m'].replace('"',""))
+                    if mmbot.predict_1 > 1:
+                        mmbot.predict_1 = old1
+                    if mmbot.predict_5 > 1:
+                        mmbot.predict_5 = old5
+                    if mmbot.predict_1 < 0:
+                        mmbot.predict_1 = old1
+                    if mmbot.predict_5 < 0:
+                        mmbot.predict_5 = old5
+                    print(' ')
+                    print('New predictions!')
+                    print('Predict 1m: ' + str(mmbot.predict_1))
+                    print('Predict 5m:' + str(mmbot.predict_5))
+                    print(' ')
         except Exception as e:
             print(e)
-            return('500')
-    def update_status( self ):
-
+            mmbot.predict_1 = 0.5
+            mmbot.predict_5 = 0.5
+            abcd1234 = 1
         positionSize = 0
         positionPos = 0
         for p in self.positions:
@@ -2317,12 +2226,12 @@ class MarketMaker( object ):
                                 else:
                                     self.client2.sell(  p, size, mid * 0.98, 'false' )
 
-                            else:
+                            #else:
 
-                                if 'ETH' in p:
-                                    self.client2.buy(  p, size, mid * 1.02, 'false' )
-                                else:
-                                    self.client2.buy(  p, size, mid * 1.02, 'false' )
+                               # if 'ETH' in p:
+                               #     self.client2.buy(  p, size, mid * 1.02, 'false' )
+                               # else:
+                               #     self.client2.buy(  p, size, mid * 1.02, 'false' )
                         sleep(60 * 0.1)
                     except Exception as e:
                         print(e)
@@ -2476,14 +2385,12 @@ def marketThread(self, instrument, buyorsell, size):
         #    self.client.buy(  instrument, size, mid * 1.02, 'false' )
         #else:
         #    self.client.sell(  instrument, size, mid * 0.98, 'false' )                 
-def flaskThread():
-    app.run(debug=False, use_reloader=False,host='0.0.0.0', port=8081)      
+     
 
 if __name__ == '__main__':
     
     try:
         mmbot = MarketMaker( monitor = args.monitor, output = args.output )
-        _thread.start_new_thread(flaskThread,())
 
         mmbot.run()
         

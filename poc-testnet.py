@@ -71,14 +71,13 @@ from datetime import datetime
 ##print(qs.stats.max_drawdown(s))
 
 args    = parser.parse_args()
-URL     = 'https://www.deribit.com'#ctrl+h!!!!!
+URL     = 'https://test.deribit.com'#ctrl+h!!!!!
 skews = []
 
-KEY2 = "C1UGHf6-"
-SECRET2 = "qNYfTPo6-5GD8YhKCTJvPsW3_t-dkRq9rbRltMaVqqM"
-
-KEY     = 'lGScHgoJ'
-SECRET  = 'hpbl22Nb9pf_mwTZ8mSsfG1U9d2aQ9cztlhYDYVelO8'
+KEY2 = "5HkSPCwo"
+SECRET2 = "z5fHc3FFB_SrVmEK6z0Unc-CjtHVU9_5pNMCdbXw_K0"
+KEY     = 'Pl-BmicT'
+SECRET  = '8IbGP-Q7YJk-Eabrk5jYghQbMD5ajKuwJwTsQ5iOrfk'
 ULTRACONSERVATIVE = True
 BP                  = 1e-4      # one basis point
 BTC_SYMBOL          = 'btc'
@@ -96,9 +95,9 @@ NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
 PCT_LIM_LONG        = 20      # % position limit long
 PCT_LIM_SHORT       = 20 # % position limit short
-PCT_QTY_BASE        = 20 # pct order qty in bps as pct of acct on each order
+PCT_QTY_BASE        = 20/2.5 # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =  0.25      # Minimum time between loops
-RISK_CHARGE_VOL     =   250*4  # vol risk charge in bps per 100 vol
+RISK_CHARGE_VOL     =   130*4  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
 WAVELEN_MTIME_CHK   = 15        # time in seconds between check for file change
@@ -735,9 +734,7 @@ class MarketMaker( object ):
             print('asks ' + str(nasks))    
             nasks = int (nasks)
             nbids = int (nbids)
-            if self.positionGains[fut] == True:
-                nasks = 2
-                nbids = 2
+            
             place_bids = nbids > 0
             place_asks = nasks > 0
             #buy bid sell ask
@@ -868,10 +865,11 @@ class MarketMaker( object ):
                     print('-----')
                     print(fut)
                     print(self.positionGains[fut])
-                    if self.positionGains[fut] == True:
 
-                        if positionSize < 0:
-                            qty = 0.25 * positionSize * -1#len(self.futures)
+                    qtyold = qty
+                    qty = 1 * positionSize * -1#len(self.futures)
+                    if qtyold > qty:
+                        qty = qtyold
 
                     if 'PERPETUAL' in fut and self.thearb > 1 and positionSize < 0:
                         qty = qty * 1.2#len(self.futures) 
@@ -887,16 +885,20 @@ class MarketMaker( object ):
                         p1 = 0.2
                     if p5 < 0.2:
                         p5 = 0.2
-                    if fut == 'BTC-PERPETUAL':
+                    if fut == 'BTC-25SEP20':
                         print(' ')
                         print('predict_1: ' + str(p1) + ' & predict_5: ' + str(p5))
                         print('qty of perp to buy before predictions: ' + str(qty))
                     #qty = round(qty * (1/(math.sqrt(p1)*math.sqrt(p5))) / 2)
-                    if fut == 'BTC-PERPETUAL':
+                    if fut == 'BTC-26JUN20':
                         print('qty after predictions: ' + str(qty))
                         print(' ' )
                     positionSize = positionSize * 10
                     #print('pos size: ' + str(positionSize))
+                    if qty < 0:
+                        qty = qty * -1
+                    if qty < 1:
+                        qty = 1
                     if qty * 10 > self.maxqty:
                         self.maxqty = qty * 10
                         print('---')
@@ -904,11 +906,11 @@ class MarketMaker( object ):
                     if positionSize > 0:
                         print((qty * 10 * MAX_LAYERS) / 2 + positionSize)
                         print('maxqty: ' + str(self.maxqty))             
-                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5)):
+                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 5)):
                             if self.positions[fut]['size'] > 0:
                                 print('max skew on buy')
                                 gogo = False
-                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 2)):
+                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 5 * 2)):
                             if self.positions[fut]['size'] < 0:
                                 print('max skew on buy')
                                 gogo = False
@@ -927,9 +929,12 @@ class MarketMaker( object ):
                             #raise
                         #except:
                         try:
-                            if self.arbmult[fut]['arb'] >= 1 and self.positions[fut]['size'] + qty / 2 < 0:
+
+                            if self.arbmult[fut]['arb'] >= 1 and positionSize - qty /  2<= 0:
                                 self.client.buy( fut, qty, prc, 'true' )
-                            if self.arbmult[fut]['arb'] <= 1 and 'PERPETUAL' not in fut or self.arbmult[fut]['arb'] > 1 and 'PERPETUAL' in fut:
+
+
+                            if self.arbmult[fut]['arb'] <= 1 and  positionSize - qty /  2<= 0:
                                 self.client.buy(  fut, qty, prc, 'true' )
                             #cancel_oids.append( oid )
                             #self.logger.warn( 'Edit failed for %s' % oid )
@@ -937,7 +942,7 @@ class MarketMaker( object ):
                             raise
                         except Exception as e:
                             print(e)
-                            if 'BTC-PERPETUAL' in str(e):
+                            if 'BTC-PERPETUAL' in str(e) and i == 0:
                                 try:
 
                                     positionSize = 0
@@ -945,10 +950,10 @@ class MarketMaker( object ):
                                         positionSize = positionSize + self.positions[p]['size']
                                     positionSize = positionSize * 10
                                     for k in self.arbmult:
-                                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5)) and self.positions[fut]['size'] > 0:
+                                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 5)) and self.positions[fut]['size'] > 0:
                                             
                                             print('max_skew on btc-perp buy!')
-                                        elif (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2 * 1.25)) and self.positions[fut]['size'] < 0:
+                                        elif (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2 * 1.25 * 5)) and self.positions[fut]['size'] < 0:
                                             
                                             print('max_skew on btc-perp buy!')    
                                         elif nbids > 0:
@@ -956,21 +961,6 @@ class MarketMaker( object ):
                                                 if self.arbmult[k]['arb'] >= 1  or self.positions['BTC-PERPETUAL']['size'] < 0:
                                                     
                                                     self.client.buy(  fut, qty, prc, 'true' )
-                                        print((qty * 10 * MAX_LAYERS) / 2 - positionSize)
-                                        if (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2.5)) and self.positions[fut]['size'] < 0:
-                                            
-                                            print('max_skew on btc-perp sell!')
-                                        elif (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2 * 1.25)) and self.positions[fut]['size'] > 0:
-                                            
-                                            print('max_skew on btc-perp sell!')    
-                                        elif nasks > 0:
-                                            print(self.imbuying['BTC-PERPETUAL'])
-                                            if self.imbuying['BTC-PERPETUAL'] == False:
-                                                print(self.arbmult[k]['arb'] )
-                                                if self.arbmult[k]['arb'] <= 1  or self.positions['BTC-PERPETUAL']['size'] > 0:
-                                                
-                                                    self.client.sell(  fut, qty, prc, 'true' )
-                                        
 
                                 except Exception as e:
                                     print(e)
@@ -991,18 +981,18 @@ class MarketMaker( object ):
                             #abc = 1
                         try:
                             
-                            if self.arbmult[fut]['arb'] >= 1 and self.positions[fut]['size'] - qty /  2<= 0:
+                            if self.arbmult[fut]['arb'] >= 1 and positionSize - qty /  2<= 0:
                                 self.client.buy( fut, qty, prc, 'true' )
 
 
-                            if self.arbmult[fut]['arb'] <= 1:
+                            if self.arbmult[fut]['arb'] <= 1 and positionSize - qty /  2<= 0:
                                 self.client.buy(  fut, qty, prc, 'true' )
 
 
                         except (SystemExit, KeyboardInterrupt):
                             raise
                         except Exception as e:
-                            if 'BTC-PERPETUAL' in str(e):
+                            if 'BTC-PERPETUAL' in str(e) and i == 0:
                                 try:
 
                                     positionSize = 0
@@ -1010,10 +1000,10 @@ class MarketMaker( object ):
                                         positionSize = positionSize + self.positions[p]['size']
                                     positionSize = positionSize * 10
                                     for k in self.arbmult:
-                                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5)) and self.positions[fut]['size'] > 0:
+                                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 5)) and self.positions[fut]['size'] > 0:
                                             
                                             print('max_skew on btc-perp buy!')
-                                        elif (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2 * 1.25)) and self.positions[fut]['size'] < 0:
+                                        elif (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2 * 1.25 * 5)) and self.positions[fut]['size'] < 0:
                                             
                                             print('max_skew on btc-perp buy!')    
                                             
@@ -1022,23 +1012,7 @@ class MarketMaker( object ):
                                                 if self.arbmult[k]['arb'] >= 1  or self.positions['BTC-PERPETUAL']['size'] < 0:
                                                     
                                                     self.client.buy(  fut, qty, prc, 'true' )
-                                        print((qty * 10 * MAX_LAYERS) / 2 - positionSize)
-                                        if (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2.5)) and self.positions[fut]['size'] < 0:
-                                            
-                                            print('max_skew on btc-perp sell!')
-                                        elif (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2 * 1.25)) and self.positions[fut]['size'] > 0:
-                                            
-                                            print('max_skew on btc-perp sell!')  
-                                            
-                                        elif nasks > 0:
-                                            print(self.imbuying['BTC-PERPETUAL'])
-                                            if self.imbuying['BTC-PERPETUAL'] == False:
-                                                print(self.arbmult[k]['arb'] )
-                                                if self.arbmult[k]['arb'] <= 1 or self.positions['BTC-PERPETUAL']['size'] > 0:
-                                                
-                                                    self.client.sell(  fut, qty, prc, 'true' )
-                                        
-
+                                       
                                 except Exception as e:
                                     print(e)
                                     #cancel_oids.append( oid )
@@ -1088,9 +1062,10 @@ class MarketMaker( object ):
                     positionSize = 0
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
-                    if self.positionGains[fut] == True:
-                        if positionSize > 0:
-                            qty = 0.25 * positionSize#len(self.futures)
+                    qtyold = qty
+                    qty = 1 * positionSize#len(self.futures)
+                    if qtyold > qty:
+                        qty = qtyold
                     if 'PERPETUAL' in fut and self.thearb < 1 and positionSize < 0: 
                         qty = qty * 1.2#len(self.futures)
                     elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize < 0:
@@ -1104,12 +1079,16 @@ class MarketMaker( object ):
                         p1 = 0.2
                     if p5 < 0.2:
                         p5 = 0.2
-                    if fut == 'BTC-PERPETUAL':
+                    if fut == 'BTC-26JUN20':
                         print(' ')
                         print('predict_1: ' + str(p1) + ' & predict_5: ' + str(p5))
                         print('qty of perp to sell before predictions: ' + str(qty))
                     #qty = round(qty * (1/(math.sqrt(p1)*math.sqrt(p5))) / 2)
                     positionSize = positionSize * 10
+                    if qty < 0:
+                        qty = qty * -1
+                    if qty < 1:
+                        qty = 1
                     #print('pos size: ' + str(positionSize))
                     if qty * 10 > self.maxqty:
                         self.maxqty = qty * 10
@@ -1119,10 +1098,10 @@ class MarketMaker( object ):
 
 
                         print((qty * 10 * MAX_LAYERS) / 2 + positionSize * -1)
-                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty * 2.5)) and self.positions[fut]['size'] < 0:
+                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty * 2.5 * 5)) and self.positions[fut]['size'] < 0:
                             print('max skew on sell')
                             gogo = False
-                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty * 2 * 1.25)) and self.positions[fut]['size'] > 0:
+                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty * 2 * 1.25 * 5)) and self.positions[fut]['size'] > 0:
                             print('max skew on sell')
                             gogo = False
                     if  self.imbuying[fut] == True:
@@ -1139,9 +1118,9 @@ class MarketMaker( object ):
                         #except:
                         try:
                             if place_asks and i < nasks:
-                                if self.arbmult[fut]['arb'] >= 1 and self.positions[fut]['size'] + qty / 2< 0:
+                                if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2>= 0:
                                     self.client.sell( fut, qty, prc, 'true' )
-                            if self.arbmult[fut]['arb'] <= 1 and 'PERPETUAL' not in fut or self.arbmult[fut]['arb'] > 1 and 'PERPETUAL' in fut:
+                            if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2>= 0 and 'PERPETUAL' not in fut or self.arbmult[fut]['arb'] > 1 and 'PERPETUAL' in fut:
                                 self.client.sell(  fut, qty, prc, 'true' )
 
 
@@ -1150,7 +1129,8 @@ class MarketMaker( object ):
                         except (SystemExit, KeyboardInterrupt):
                             raise
                         except Exception as e:
-                            if 'BTC-PERPETUAL' in str(e):
+                            if 'BTC-PERPETUAL' in str(e) and i == 0:
+
                                 print('===')
                                 print(' ')
                                 print((qty * 10 * MAX_LAYERS) / 2 + positionSize)
@@ -1160,23 +1140,11 @@ class MarketMaker( object ):
                                         positionSize = positionSize + self.positions[p]['size']
                                     positionSize = positionSize * 10
                                     for k in self.arbmult:
-                                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5)) and self.positions[fut]['size'] > 0:
-                                            
-                                            print('max_skew on btc-perp buy!')
-                                        elif (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2 * 1.25)) and self.positions[fut]['size'] < 0:
-                                            
-                                            print('max_skew on btc-perp buy!')    
-                                            
-                                        elif nbids > 0:
-                                            if self.imselling['BTC-PERPETUAL'] == False:
-                                                if self.arbmult[k]['arb'] >= 1  or self.positions['BTC-PERPETUAL']['size'] < 0:
-                                                    
-                                                    self.client.buy(  fut, qty, prc, 'true' )
                                         print((qty * 10 * MAX_LAYERS) / 2 - positionSize)
-                                        if (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2.5)) and self.positions[fut]['size'] < 0:
+                                        if (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2.5 * 5)) and self.positions[fut]['size'] < 0:
                                             
                                             print('max_skew on btc-perp sell!')
-                                        elif (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2 * 1.25)) and self.positions[fut]['size'] > 0:
+                                        elif (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2 * 1.25 * 5)) and self.positions[fut]['size'] > 0:
                                             
                                             print('max_skew on btc-perp sell!')  
                                             
@@ -1208,17 +1176,17 @@ class MarketMaker( object ):
                             #print('edit error')
                             #abc = 1
                         try:
-                            if self.arbmult[fut]['arb'] >= 1:
+                            if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2 >= 0:
                                 self.client.sell( fut, qty, prc, 'true' )
 
 
-                            if self.arbmult[fut]['arb'] <= 1 and self.positions[fut]['size'] + qty / 2 >= 0:
+                            if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2 >= 0:
                                 self.client.sell(  fut, qty, prc, 'true' )
 
                         except (SystemExit, KeyboardInterrupt):
                             raise
                         except Exception as e:
-                            if 'BTC-PERPETUAL' in str(e):
+                            if 'BTC-PERPETUAL' in str(e) and i == 0:
                                 try:
 
                                     positionSize = 0
@@ -1226,23 +1194,11 @@ class MarketMaker( object ):
                                         positionSize = positionSize + self.positions[p]['size']
                                     positionSize = positionSize * 10
                                     for k in self.arbmult:
-                                        if (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5)) and self.positions[fut]['size'] > 0:
-                                            
-                                            print('max_skew on btc-perp buy!')
-                                        elif (((qty * 10 * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2 * 1.25)) and self.positions[fut]['size'] < 0:
-                                            
-                                            print('max_skew on btc-perp buy!')    
-                                            
-                                        elif nbids > 0:
-                                            if self.imselling['BTC-PERPETUAL'] == False:
-                                                if self.arbmult[k]['arb'] >= 1  or self.positions['BTC-PERPETUAL']['size'] < 0:
-                                                    
-                                                    self.client.buy(  fut, qty, prc, 'true' )
                                         print((qty * 10 * MAX_LAYERS) / 2 - positionSize)
-                                        if (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2.5)) and self.positions[fut]['size'] < 0:
+                                        if (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2.5 * 5)) and self.positions[fut]['size'] < 0:
                                             
                                             print('max_skew on btc-perp sell!')
-                                        elif (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2 * 1.25)) and self.positions[fut]['size'] > 0:
+                                        elif (((qty * 10 * MAX_LAYERS) / 2 - positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * 10 * MAX_LAYERS) / 2 - positionSize > self.maxqty * 2 * 1.25 * 5)) and self.positions[fut]['size'] > 0:
                                             
                                             print('max_skew on btc-perp sell!')  
                                             
