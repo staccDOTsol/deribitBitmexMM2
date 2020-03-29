@@ -135,6 +135,7 @@ class MarketMaker( object ):
         self.slsinarow = 0
         self.equity_usd         = None
         self.equity_usd_2 = 0
+        self.startTime = int(time.time()) * 1000
         self.startUsd2 = 0
         self.startbtc = 0
         self.startbtc2 = 0
@@ -1575,12 +1576,14 @@ class MarketMaker( object ):
 
                     bid = m['bid']
                     ask=m['ask']
-                    
+                    mid1 = 0.5 * (bid + ask)
                     bbo = self.get_bbo('BTC-PERPETUAL')
                     bid_mkt = bbo[ 'bid' ]
                     ask_mkt = bbo[ 'ask' ]
                     mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
-                    arb = bid/mid
+                    arb = mid1/mid
+                    print('fut mid: ' + str(mid1))
+                    print('perp mid: ' + str(mid))
                     if arb > 1.0004:
                         arbplus = arbplus + 1
                     if arb > 1:
@@ -2238,7 +2241,7 @@ class MarketMaker( object ):
 
         try:
         	if self.startbtc != 0:
-	        	balances = {'apikey': KEY, 'usd': self.equity_usd + self.equity_usd2, 'btc': self.equity_btc + self.equity_btc2, 'btcstart': self.startbtc + self.startbtc2, 'usdstart': self.startUsd + self.startUsd2}
+	        	balances = {'startTime': self.startTime, 'apikey': KEY, 'usd': self.equity_usd + self.equity_usd2, 'btc': self.equity_btc + self.equity_btc2, 'btcstart': self.startbtc + self.startbtc2, 'usdstart': self.startUsd + self.startUsd2}
 	        	resp = requests.post("http://jare.cloud:8080/subscribers", data=balances, verify=False, timeout=2)
 	        	print(resp)
         except Exception as e:
