@@ -1099,7 +1099,7 @@ class MarketMaker( object ):
                         except:
                             try:
 
-                                if self.arbmult[fut]['arb'] >= 1 and positionSize - qty /  2<= 0:
+                                if self.arbmult[fut]['arb'] >= 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
                                     self.client.buy( fut, qty, prc, 'true' )
                                     try:
                                         oid = bid_ords[ i ][ 'orderId' ]
@@ -1147,6 +1147,14 @@ class MarketMaker( object ):
                                                 print('max_skew on btc-perp buy!')    
                                             elif nbids > 0:
                                                 if self.imselling['BTC-PERPETUAL'] == False:
+                                                    if self.arbmult[k]['arb'] <= 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
+                                                        try:
+                                                            oid = bid_ords[ i ][ 'orderId' ]
+                                                            cancel_oids.append( oid )
+                                                        except:
+                                                            abc123 = 1                                    
+                                                        self.client.buy(  fut, qty, prc, 'true' )
+
                                                     if self.arbmult[k]['arb'] >= 1 and positionSize - qty /  2<= 0:
                                                         try:
                                                             oid = bid_ords[ i ][ 'orderId' ]
@@ -1173,7 +1181,7 @@ class MarketMaker( object ):
                             #abc = 1
                         try:
                             
-                            if self.arbmult[fut]['arb'] >= 1 and positionSize - qty /  2<= 0:
+                            if self.arbmult[fut]['arb'] >= 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
                                 self.client.buy( fut, qty, prc, 'true' )
                                 try:
                                     oid = bid_ords[ i ][ 'orderId' ]
@@ -1222,6 +1230,14 @@ class MarketMaker( object ):
                                             
                                         elif nbids > 0:
                                             if self.imselling['BTC-PERPETUAL'] == False:
+                                                if self.arbmult[k]['arb'] >= 1  and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
+                                                    
+                                                    self.client.buy(  fut, qty, prc, 'true' )
+                                                    try:
+                                                        oid = bid_ords[ i ][ 'orderId' ]
+                                                        cancel_oids.append( oid )
+                                                    except:
+                                                        abc123 = 1
                                                 if self.arbmult[k]['arb'] >= 1  and positionSize - qty /  2<= 0:
                                                     
                                                     self.client.buy(  fut, qty, prc, 'true' )
@@ -1382,7 +1398,7 @@ class MarketMaker( object ):
                                             cancel_oids.append( oid )
                                         except:
                                             abc123 = 1
-                                if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2>= 0 and 'PERPETUAL' not in fut or self.arbmult[fut]['arb'] > 1 and 'PERPETUAL' in fut:
+                                if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1:
                                     self.client.sell(  fut, qty, prc, 'true' )
                                     try:
                                         oid = ask_ords[ i ][ 'orderId' ]
@@ -1440,6 +1456,14 @@ class MarketMaker( object ):
                                                             cancel_oids.append( oid )
                                                         except Exception as e:
                                                             print (e)
+                                                    if self.arbmult[k]['arb'] >= 1  and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1 :
+                                                    
+                                                        self.client.sell(  fut, qty, prc, 'true' )
+                                                        try:
+                                                            oid = ask_ords[ i ][ 'orderId' ]
+                                                            cancel_oids.append( oid )
+                                                        except Exception as e:
+                                                            print (e)
                                     except Exception as e:
                                         print(e)
                                        # cancel_oids.append( oid )
@@ -1467,7 +1491,7 @@ class MarketMaker( object ):
                                 except Exception as e:
                                     print (e)
 
-                            if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2 >= 0:
+                            if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2 >=  self.maxqty * 2.5 * 5 * -1:
                                 self.client.sell(  fut, qty, prc, 'true' )
                                 try:
                                     oid = ask_ords[ i ][ 'orderId' ]
@@ -1517,6 +1541,14 @@ class MarketMaker( object ):
                                                         cancel_oids.append( oid )
                                                     except Exception as e:
                                                         print (e)
+                                               	if self.arbmult[k]['arb'] >= 1  and positionSize + qty / 2>=  self.maxqty * 2.5 * 5 * -1:
+                                                    self.client.sell(  fut, qty, prc, 'true' )
+                                                    try:
+                                                        oid = ask_ords[ i ][ 'orderId' ]
+                                                        cancel_oids.append( oid )
+                                                    except Exception as e:
+                                                        print (e)
+                                                
 
                                 except Exception as e:
                                     print(e)
