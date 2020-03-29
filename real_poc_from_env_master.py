@@ -916,7 +916,12 @@ class MarketMaker( object ):
                 #0.4/0.5 place_asks false, place_asks2 false
                 #0.3/0.5 place_asks true, place_asks2 false
                 #0.2/0.5 true, true
-                if place_asks2 == False:
+                positionSize2 = 0
+                for p in self.positions:
+                    positionSize2 = positionSize2 + self.positions[p]['size']
+                if positionSize2 < 0:
+                	positionSize2 = positionSize2 * -1
+                if place_asks2 == False  or positionSize2 > self.maxqty / 10 * 2.5 * 3.5:
                     if len(askso) >= 1:
                         asksn.append(askso[0])
                     if len(askso) >= 2:
@@ -930,7 +935,7 @@ class MarketMaker( object ):
                         bidsn.append(bids1[1])
                         nbids = nbids + 1
                     len_bid_ords = min( len( bid_ords ), nbids )
-                if place_bids2 == False:
+                if place_bids2 == False or positionSize2 > self.maxqty / 10 * 2.5 * 3.5:
 	                if len(bidso) >= 1:
 	                    bidsn.append(bidso[0])
 	                if len(bidso) >= 2:
