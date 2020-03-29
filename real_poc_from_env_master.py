@@ -789,6 +789,9 @@ class MarketMaker( object ):
             riskfac     = math.exp( eps )
 
             if self.positionGains[fut] == True:
+                for p in self.client.positions():
+                    if p['instrument'] == fut:
+                        avg = p['averagePrice']
                 bbo     = self.get_bbo( fut )
                 bid_mkt = bbo[ 'bid' ]
                 ask_mkt = bbo[ 'ask' ]
@@ -805,18 +808,123 @@ class MarketMaker( object ):
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
                     bid0            = mid_mkt * math.exp( -MKT_IMPACT )
-                    bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
+                    bids1    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
 
-                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                    bids1[ 0 ]   = ticksize_floor( bids1[ 0 ], tsz )
                     
                 if place_asks:
                     
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
                     len_ask_ords    = min( len( ask_ords ), nasks )
                     ask0            = mid_mkt * math.exp(  MKT_IMPACT )
-                    asks    = [ ask0 * riskfac ** i for i in range( 1, int(nasks) + 1 ) ]
+                    asks1    = [ ask0 * riskfac ** i for i in range( 1, int(nasks) + 1 ) ]
 
-                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                    asks1[ 0 ]   = ticksize_ceil( asks1[ 0 ], tsz  )
+                
+                
+                bbo     = self.getbidsandasks( fut , mid_mkt)
+                bids = bbo['bids']
+                asks = bbo['asks']
+                asksn = []
+                bidsn = []
+                askso = asks
+                bidso = asks
+                account         = self.client.account()
+
+                spot            = self.get_spot()
+                bal_btc         = account[ 'equity' ] * 100
+                pos_lim_long    = bal_btc * (PCT_LIM_LONG * 0.5) / len(self.futures)
+                pos_lim_short   = bal_btc * (PCT_LIM_SHORT * 0.5) / len(self.futures)
+
+                if 'PERPETUAL' in fut:
+                    pos_lim_short = pos_lim_short * (len(self.futures)  - 1)
+                    pos_lim_long = pos_lim_long * (len(self.futures)- 1)
+                
+                expi            = self.futures[ fut ][ 'expi_dt' ]
+                ##print(self.futures[ fut ][ 'expi_dt' ])
+                if self.eth is 0:
+                    self.eth = 200
+                if 'ETH' in fut:
+                    if 'sizeEth' in self.positions[fut]:
+                        pos             = self.positions[ fut ][ 'sizeEth' ] * self.eth / self.get_spot() 
+                    else:
+                        pos = 0
+                else:
+                    pos             = self.positions[ fut ][ 'sizeBtc' ]
+
+                tte             = max( 0, ( expi - datetime.utcnow()).total_seconds() / SECONDS_IN_DAY )
+                pos_decay       = 1.0 - math.exp( -DECAY_POS_LIM * tte )
+                #pos_lim_long   *= pos_decay
+                #pos_lim_short  *= pos_decay
+                
+
+                pos_lim_long   -= pos
+                pos_lim_short  += pos
+
+                pos_lim_long    = max( 0, pos_lim_long  )
+                pos_lim_short   = max( 0, pos_lim_short )
+
+                min_order_size_btc = MIN_ORDER_SIZE / spot * CONTRACT_SIZE
+                
+                #yqbtc  = max( self.PCT_QTY_BASE  * bal_btc, min_order_size_btc)
+                qtybtc = self.PCT_QTY_BASE  * bal_btc
+                nbids2   = min( math.trunc( pos_lim_long  / qtybtc ), MAX_LAYERS )
+                nasks2   = min( math.trunc( pos_lim_short / qtybtc ), MAX_LAYERS )
+                nasks2 = int (nasks2)
+                nbids2 = int (nbids2)
+                
+                place_bids2 = nbids2 > 0
+                place_asks2 = nasks2 > 0
+                if place_asks:
+                    if len(asks1) >= 1:
+                        asksn.append(asks1[0])
+                        nasks = nasks + 1
+                    if len(asks1) >= 2:
+                        asksn.append(asks1[1])
+                        nasks = nasks + 1
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                #0.4/0.5 place_asks false, place_asks2 false
+                #0.3/0.5 place_asks true, place_asks2 false
+                #0.2/0.5 true, true
+                positionSize2 = 0
+                for p in self.positions:
+                    positionSize2 = positionSize2 + self.positions[p]['size']
+                if positionSize2 < 0:
+                	positionSize2 = positionSize2 * -1
+                if place_asks2 == False and positionSize2 > self.maxqty / 10 * 2.5 * 2.5:
+                    if len(askso) >= 1:
+                        asksn.append(askso[0])
+                    if len(askso) >= 2:
+                        asksn.append(askso[1])
+                asks = asksn
+                if place_bids:
+                    if len(bids1) >= 1:
+                        bidsn.append(bids1[0])
+                        nbids = nbids + 1
+                    if len(bids1) >= 2:
+                        bidsn.append(bids1[1])
+                        nbids = nbids + 1
+                    len_bid_ords = min( len( bid_ords ), nbids )
+                if place_bids2 == False and positionSize2 > self.maxqty / 10 * 2.5 * 2.5:
+	                if len(bidso) >= 1:
+	                    bidsn.append(bidso[0])
+	                if len(bidso) >= 2:
+	                    asksn.append(bidso[1])
+                print(bidsn)
+                bids = bidsn
+                ords        = self.client.getopenorders( fut )
+                cancel_oids = []
+                bid_ords    = ask_ords = []
+                if place_bids:
+                    
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    
+                    
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
             else:
 
                 for p in self.client.positions():
