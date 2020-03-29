@@ -1147,7 +1147,7 @@ class MarketMaker( object ):
                                                 print('max_skew on btc-perp buy!')    
                                             elif nbids > 0:
                                                 if self.imselling['BTC-PERPETUAL'] == False:
-                                                    if self.arbmult[k]['arb'] >= 1  or self.positions['BTC-PERPETUAL']['size'] <= 0:
+                                                    if self.arbmult[k]['arb'] >= 1 and positionSize - qty /  2<= 0:
                                                         try:
                                                             oid = bid_ords[ i ][ 'orderId' ]
                                                             cancel_oids.append( oid )
@@ -1222,7 +1222,7 @@ class MarketMaker( object ):
                                             
                                         elif nbids > 0:
                                             if self.imselling['BTC-PERPETUAL'] == False:
-                                                if self.arbmult[k]['arb'] >= 1  or self.positions['BTC-PERPETUAL']['size'] <= 0:
+                                                if self.arbmult[k]['arb'] >= 1  and positionSize - qty /  2<= 0:
                                                     
                                                     self.client.buy(  fut, qty, prc, 'true' )
                                                     try:
@@ -1432,7 +1432,7 @@ class MarketMaker( object ):
                                                 print(self.imbuying['BTC-PERPETUAL'])
                                                 if self.imbuying['BTC-PERPETUAL'] == False:
                                                     print(self.arbmult[k]['arb'] )
-                                                    if self.arbmult[k]['arb'] <= 1  or self.positions['BTC-PERPETUAL']['size'] >= 0:
+                                                    if self.arbmult[k]['arb'] <= 1  and positionSize + qty / 2>= 0:
                                                     
                                                         self.client.sell(  fut, qty, prc, 'true' )
                                                         try:
@@ -1510,7 +1510,7 @@ class MarketMaker( object ):
                                             print(self.imbuying['BTC-PERPETUAL'])
                                             if self.imbuying['BTC-PERPETUAL'] == False:
                                                 print(self.arbmult[k]['arb'] ) 
-                                                if self.arbmult[k]['arb'] <= 1  or self.positions['BTC-PERPETUAL']['size'] >= 0:
+                                                if self.arbmult[k]['arb'] <= 1  and positionSize + qty / 2>= 0:
                                                     self.client.sell(  fut, qty, prc, 'true' )
                                                     try:
                                                         oid = ask_ords[ i ][ 'orderId' ]
