@@ -135,6 +135,10 @@ class MarketMaker( object ):
         self.slsinarow = 0
         self.equity_usd         = None
         self.equity_usd_2 = 0
+        try:
+        	self.trial = os.environ['trial'] 
+        except:
+        	self.trial = "false"
         self.startTime = int(time.time()) * 1000
         self.startUsd2 = 0
         self.startbtc = 0
@@ -676,7 +680,11 @@ class MarketMaker( object ):
         print(self.multsShort)
     
     def place_orders( self ):
+        if self.trial == True and int(time.time()) * 1000 - self.startTime > 5 * 24 * 60 * 60 * 1000:
+            return None
 
+        if self.trial == True and self.equity_btc > 0.05:
+            return None
         if self.monitor:
             return None
         
@@ -1536,7 +1544,6 @@ class MarketMaker( object ):
     def run( self ):
         
         self.run_first()
-        self.output_status()
 
         t_ts = t_out = t_loop = t_mtime = datetime.utcnow()
         t_ts2 = t_out = t_loop = t_mtime = datetime.utcnow()
@@ -1980,8 +1987,19 @@ class MarketMaker( object ):
 
  
     def run_first( self ):
-        
         self.create_client()
+        self.update_status()
+        print(self.trial)
+        if self.trial.lower() == 'false':
+            self.trial = False
+        elif self.trial.lower() == 'true':
+            print('trialing...')
+            self.trial = True
+        if self.trial == True and int(time.time()) * 1000 - self.startTime > 5 * 24 * 60 * 60 * 1000:
+            print('trial over!')
+
+        if self.trial == True and self.equity_btc > 0.05:
+            print('trial over!')
         self.client.cancelall()
         self.logger = get_logger( 'root', LOG_LEVEL )
         # Get all futures contracts
@@ -2013,7 +2031,6 @@ class MarketMaker( object ):
         self.vols   = OrderedDict( { s: VOL_PRIOR for s in self.symbols } )
         
         self.start_time         = datetime.utcnow()
-        self.update_status()
         self.equity_usd_init    = self.equity_usd
         self.equity_btc_init    = self.equity_btc
     def avg_pnl_sl_tp ( self ):
@@ -2226,8 +2243,8 @@ class MarketMaker( object ):
             self.equity_btc2 = account2['equity']
             self.equity_usd2 = self.equity_btc2 * spot
             if self.startUsd2 == 0:
-            	self.startUsd2 = self.equity_usd2
-            	self.startbtc2 = self.equity_btc2 
+                self.startUsd2 = self.equity_usd2
+                self.startbtc2 = self.equity_btc2 
         except:
             print('only 1 account! ok!')
         
@@ -2235,17 +2252,17 @@ class MarketMaker( object ):
         
         self.equity_usd = self.equity_btc * spot
         if self.startUsd == 0:
-        	self.startbtc = self.equity_btc
-        	self.PCT_QTY_BASE = self.PCT_QTY_BASE / self.startbtc
-        	self.startUsd = self.equity_usd
+            self.startbtc = self.equity_btc
+            self.PCT_QTY_BASE = self.PCT_QTY_BASE / self.startbtc
+            self.startUsd = self.equity_usd
 
         try:
-        	if self.startbtc != 0:
-	        	balances = {'startTime': self.startTime, 'apikey': KEY, 'usd': self.equity_usd + self.equity_usd2, 'btc': self.equity_btc + self.equity_btc2, 'btcstart': self.startbtc + self.startbtc2, 'usdstart': self.startUsd + self.startUsd2}
-	        	resp = requests.post("http://jare.cloud:8080/subscribers", data=balances, verify=False, timeout=2)
-	        	print(resp)
+            if self.startbtc != 0:
+                balances = {'startTime': self.startTime, 'apikey': KEY, 'usd': self.equity_usd + self.equity_usd2, 'btc': self.equity_btc + self.equity_btc2, 'btcstart': self.startbtc + self.startbtc2, 'usdstart': self.startUsd + self.startUsd2}
+                resp = requests.post("http://jare.cloud:8080/subscribers", data=balances, verify=False, timeout=2)
+                print(resp)
         except Exception as e:
-        	print(e)
+            print(e)
         print('equity usd rounded ' + str(int(self.equity_usd * 10) / 10))
         positionSize2 = 0
         positionPos2 = 0
