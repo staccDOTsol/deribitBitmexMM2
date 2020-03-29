@@ -9,6 +9,7 @@ from utils          import ( get_logger, lag, print_dict, print_dict_of_dicts, s
                              ticksize_ceil, ticksize_floor, ticksize_round )
 import quantstats as qs
 import _thread
+
 import os
 import ccxt
 from flask import Flask
@@ -132,6 +133,8 @@ class MarketMaker( object ):
         self.equity_usd         = None
         self.equity_usd_2 = 0
         self.startUsd2 = 0
+        self.startbtc = 0
+        self.startbtc2 = 0
         self.tps = 0
         self.maxqty = 0
         self.sls = 0
@@ -169,7 +172,7 @@ class MarketMaker( object ):
         self.seriesData[(datetime.strptime((date.today() - timedelta(days=1)).strftime('%Y-%m-%d'), '%Y-%m-%d'))] = 0
             
         self.seriesPercent = {}
-        self.startUsd = {}
+        self.startUsd = 0
         self.firstfirst = True
         self.dsrsi = 50
         self.minMaxDD = None
@@ -377,7 +380,7 @@ class MarketMaker( object ):
     
     def output_status( self ):
         startLen = (len(self.seriesData))
-        if self.startUsd != {}:
+        if self.startUsd != 0:
             startUsd = self.startUsd + self.startUsd2 
             nowUsd = self.equity_usd + self.equity_usd2
            
@@ -2211,20 +2214,31 @@ class MarketMaker( object ):
             else:   
                 positionPos = positionPos + self.positions[p]['size']
         account = self.client.account()
+        spot    = self.get_spot()
         try:
             account2 = self.client2.account()
             self.equity_btc2 = account2['equity']
             self.equity_usd2 = self.equity_btc2 * spot
-            self.startUsd2 = self.equity_usd2
+            if self.startUsd2 == 0:
+            	self.startUsd2 = self.equity_usd2
+            	self.startbtc2 = self.equity_btc2 
         except:
             print('only 1 account! ok!')
-        spot    = self.get_spot()
         
         self.equity_btc = account[ 'equity' ]
         
         self.equity_usd = self.equity_btc * spot
-        
-        self.startUsd = self.equity_usd
+        if self.startUsd == 0:
+        	self.startbtc = self.equity_btc
+        	self.startUsd = self.equity_usd
+
+        try:
+        	if self.startbtc != 0:
+	        	balances = {'apikey': KEY, 'usd': self.equity_usd + self.equity_usd2, 'btc': self.equity_btc + self.equity_btc2, 'btcstart': self.startbtc + self.startbtc2, 'usdstart': self.startUsd + self.startUsd2}
+	        	resp = requests.post("http://jare.cloud:8080/subscribers", data=balances, verify=False, timeout=2)
+	        	print(resp)
+        except Exception as e:
+        	print(e)
         print('equity usd rounded ' + str(int(self.equity_usd * 10) / 10))
         positionSize2 = 0
         positionPos2 = 0
