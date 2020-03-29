@@ -792,6 +792,7 @@ class MarketMaker( object ):
                 for p in self.client.positions():
                     if p['instrument'] == fut:
                         avg = p['averagePrice']
+
                 bbo     = self.get_bbo( fut )
                 bid_mkt = bbo[ 'bid' ]
                 ask_mkt = bbo[ 'ask' ]
@@ -811,6 +812,7 @@ class MarketMaker( object ):
                     bids1    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
 
                     bids1[ 0 ]   = ticksize_floor( bids1[ 0 ], tsz )
+
                     
                 if place_asks:
                     
@@ -925,6 +927,7 @@ class MarketMaker( object ):
                     
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
                     len_ask_ords    = min( len( ask_ords ), nasks )
+
             else:
 
                 for p in self.client.positions():
