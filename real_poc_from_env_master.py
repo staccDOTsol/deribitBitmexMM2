@@ -1026,8 +1026,8 @@ class MarketMaker( object ):
 				
 				asksn = []
 				bidsn = []
-				askso = asks
-				bidso = asks
+				askso = asks1
+				bidso = bids1
 				account		 = self.client.account()
 
 				spot			= self.get_spot()
