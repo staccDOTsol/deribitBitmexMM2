@@ -2737,8 +2737,21 @@ def marketThread(self, instrument, buyorsell, size):
         #else:
         #    self.client.sell(  instrument, size, mid * 0.98, 'false' )                 
      
-mmbot = MarketMaker( monitor = args.monitor, output = args.output )
+if __name__ == '__main__':
+    
+    try:
+        mmbot = MarketMaker( monitor = args.monitor, output = args.output )
 
-mmbot.run()
+        mmbot.run()
+        
+    except( KeyboardInterrupt, SystemExit ):
+        #print( "Cancelling open orders" )
+        mmbot.client.cancelall()
+        sys.exit()
+    except Exception as e:
+        print(e)
+        print( traceback.format_exc())
+        if args.restart:
+            mmbot.restart()
 
         
