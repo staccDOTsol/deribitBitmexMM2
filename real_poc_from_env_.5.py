@@ -672,7 +672,7 @@ class MarketMaker( object ):
         print(self.multsShort)
     
     def place_orders( self ):
-
+        
         if self.monitor:
             return None
         
