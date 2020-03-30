@@ -155,6 +155,7 @@ class MarketMaker( object ):
         self.equity_btc_init    = None
         self.con_size           = float( CONTRACT_SIZE )
         self.client             = None
+        self.veryfirst = True
         self.positionGains = {}
         self.perps = 0
         self.perps2 = 0
@@ -2484,8 +2485,9 @@ class MarketMaker( object ):
         self.equity_btc = account[ 'equity' ]
         
         self.equity_usd = self.equity_btc * spot
-
-        self.PCT_QTY_BASE = self.PCT_QTY_BASE / self.equity_btc
+        if self.veryfirst == True:
+        	self.PCT_QTY_BASE = self.PCT_QTY_BASE / self.equity_btc
+        	self.veryfirst = False
         try:
             account2 = self.client2.account()
             self.equity_btc2 = account2['equity']
