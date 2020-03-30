@@ -833,9 +833,32 @@ class MarketMaker( object ):
                     asks1[ 0 ]   = ticksize_ceil( asks1[ 0 ], tsz  )
                 
                 
-                bbo     = self.getbidsandasks( fut , mid_mkt)
-                bids = bbo['bids']
-                asks = bbo['asks']
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
+                print('fut ' + fut)
+                print(mid)
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+                if place_bids:
+                    
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
+
+                    bids[ 0 ]   = ticksize_floor( bids1[ 0 ], tsz )
+
+                    
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, int(nasks) + 1 ) ]
+
+                    asks[ 0 ]   = ticksize_ceil( asks1[ 0 ], tsz  )
+                
                 asksn = []
                 bidsn = []
                 askso = asks
@@ -1266,9 +1289,10 @@ class MarketMaker( object ):
                                             else:
                                                 print('nbids > 0')
                                                 if self.imselling['BTC-PERPETUAL'] == False:
-                                                    print(positionSize - qty /  2)
-                                                    print(self.maxqty * 2.5 * 5)
                                                     if self.arbmult[k]['arb'] <= 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
+                                                        
+                                                        print(positionSize - qty /  2)
+                                                        print(self.maxqty * 2.5 * 5)
                                                         try:
                                                             oid = bid_ords[ i ][ 'orderId' ]
                                                             cancel_oids.append( oid )
@@ -1353,9 +1377,10 @@ class MarketMaker( object ):
                                         else:
                                             print('nbids > 0')
                                             if self.imselling['BTC-PERPETUAL'] == False:
-                                                print(positionSize - qty /  2)
-                                                print(self.maxqty * 2.5 * 5)
-                                                if self.arbmult[k]['arb'] >= 1  and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
+                                                
+                                                if self.arbmult[k]['arb'] <= 1  and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
+                                                    print(positionSize - qty /  2)
+                                                    print(self.maxqty * 2.5 * 5)
                                                     self.perps2 = self.perps2 + 1
                                                     self.client.buy(  fut, qty, prc, 'true' )
                                                     try:
