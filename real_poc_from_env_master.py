@@ -9,6 +9,7 @@ from utils          import ( get_logger, lag, print_dict, print_dict_of_dicts, s
                              ticksize_ceil, ticksize_floor, ticksize_round )
 import quantstats as qs
 import _thread
+import os.path
 
 import os
 import ccxt
@@ -139,7 +140,7 @@ class MarketMaker( object ):
             self.trial = os.environ['trial'] 
         except:
             self.trial = "false"
-        self.startTime = int(time.time()) * 1000
+        self.startTime = 0
         self.startUsd2 = 0
         self.startbtc = 0
         self.startbtc2 = 0
@@ -2480,23 +2481,47 @@ class MarketMaker( object ):
                 positionPos = positionPos + self.positions[p]['size']
         account = self.client.account()
         spot    = self.get_spot()
+        self.equity_btc = account[ 'equity' ]
+        
+        self.equity_usd = self.equity_btc * spot
+
+        self.PCT_QTY_BASE = self.PCT_QTY_BASE / self.equity_btc
         try:
             account2 = self.client2.account()
             self.equity_btc2 = account2['equity']
             self.equity_usd2 = self.equity_btc2 * spot
-            if self.startUsd2 == 0:
-                self.startUsd2 = self.equity_usd2
-                self.startbtc2 = self.equity_btc2 
+
         except:
             print('only 1 account! ok!')
-        
-        self.equity_btc = account[ 'equity' ]
-        
-        self.equity_usd = self.equity_btc * spot
-        if self.startUsd == 0:
+      
+        if os.path.isfile('bals.json'):
+            with open('bals.json') as json_file:
+                data = json.load(json_file)
+                self.startTime = data['startTime']
+                self.startbtc = data['startbtc']
+                
+                self.startUsd = data['startUsd']
+                self.startUsd2 = data['startUsd2']
+                self.startbtc2 = data['startbtc2']
+        else:
+
+
+                
             self.startbtc = self.equity_btc
-            self.PCT_QTY_BASE = self.PCT_QTY_BASE / self.startbtc
             self.startUsd = self.equity_usd
+            self.startUsd2 = self.equity_usd2
+            self.startbtc2 = self.equity_btc2
+            data = {}
+            data['startTime'] = int(time.time()) * 1000
+            data['startbtc'] = self.startbtc
+            data['startUsd'] = self.startUsd
+
+            data['startbtc2'] = self.startbtc
+            data['startUsd2'] = self.startUsd
+            with open('bals.json', 'w') as outfile:
+                json.dump(data, outfile)
+
+        
 
         try:
             if self.startbtc != 0:
