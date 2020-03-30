@@ -869,8 +869,8 @@ class MarketMaker( object ):
 
                 spot            = self.get_spot()
                 bal_btc         = account[ 'equity' ] * 100
-                pos_lim_long2    = bal_btc * (PCT_LIM_LONG * 0.5) / len(self.futures)
-                pos_lim_short2   = bal_btc * (PCT_LIM_SHORT * 0.5) / len(self.futures)
+                pos_lim_long2    = bal_btc * (PCT_LIM_LONG * 2) / len(self.futures)
+                pos_lim_short2   = bal_btc * (PCT_LIM_SHORT * 2) / len(self.futures)
 
                 if 'PERPETUAL' in fut:
                     pos_lim_short2 = pos_lim_short2 * (len(self.futures)  - 1)
@@ -1003,8 +1003,8 @@ class MarketMaker( object ):
 
                 spot            = self.get_spot()
                 bal_btc         = account[ 'equity' ] * 100
-                pos_lim_long2    = bal_btc * (PCT_LIM_LONG * 0.5) / len(self.futures)
-                pos_lim_short2   = bal_btc * (PCT_LIM_SHORT * 0.5) / len(self.futures)
+                pos_lim_long2    = bal_btc * (PCT_LIM_LONG ) / len(self.futures)
+                pos_lim_short2   = bal_btc * (PCT_LIM_SHORT ) / len(self.futures)
 
                 if 'PERPETUAL' in fut:
                     pos_lim_short2 = pos_lim_short2 * (len(self.futures)  - 1)
@@ -1027,22 +1027,36 @@ class MarketMaker( object ):
                 #pos_lim_long   *= pos_decay
                 #pos_lim_short  *= pos_decay
                 
-
+                print(' --- ')
+                print(' --- ')
+                print(pos_lim_long2)
+                print(pos_lim_short2)
                 pos_lim_long2   -= pos
                 pos_lim_short2  += pos
-
+                print(pos_lim_long2)
+                print(pos_lim_short2)
                 pos_lim_long2    = max( 0, pos_lim_long2 )
                 pos_lim_short2   = max( 0, pos_lim_short2 )
 
+                print(pos_lim_long2)
+                print(pos_lim_short2)
+                pos_lim_short2 = pos_lim_short2 / 100
+
+                pos_lim_long2 = pos_lim_long2 / 100
+
+                print(pos_lim_long2)
+                print(pos_lim_short2)
                 min_order_size_btc = MIN_ORDER_SIZE / spot * CONTRACT_SIZE
                 
-                #yqbtc  = max( self.PCT_QTY_BASE  * bal_btc, min_order_size_btc)
-                qtybtc = self.PCT_QTY_BASE  * bal_btc
+                qtybtc  = max( self.PCT_QTY_BASE  * bal_btc, min_order_size_btc)
+                print(qtybtc)
+                print(pos_lim_long2  / qtybtc)
                 nbids2   = min( math.trunc( pos_lim_long2  / qtybtc ), MAX_LAYERS )
                 nasks2   = min( math.trunc( pos_lim_short2 / qtybtc ), MAX_LAYERS )
                 nasks2 = int (nasks2)
                 nbids2 = int (nbids2)
-                
+                print(nbids2)
+                print(nasks2)
                 place_bids2 = nbids2 > 0
                 place_asks2 = nasks2 > 0
                 if place_asks2:
