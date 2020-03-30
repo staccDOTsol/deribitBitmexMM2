@@ -2516,8 +2516,8 @@ class MarketMaker( object ):
             data['startbtc'] = self.startbtc
             data['startUsd'] = self.startUsd
 
-            data['startbtc2'] = self.startbtc
-            data['startUsd2'] = self.startUsd
+            data['startbtc2'] = self.startbtc2
+            data['startUsd2'] = self.startUsd2
             with open('bals.json', 'w') as outfile:
                 json.dump(data, outfile)
 
