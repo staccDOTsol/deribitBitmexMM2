@@ -687,7 +687,7 @@ class MarketMaker( object ):
         if self.trial == True and int(time.time()) * 1000 - self.startTime > 5 * 24 * 60 * 60 * 1000:
             return None
 
-        if self.trial == True and self.equity_btc > 0.1:
+        if self.trial == True and self.equity_btc > 1:
             return None
         if self.monitor:
             return None
@@ -2242,7 +2242,7 @@ class MarketMaker( object ):
         if self.trial == True and int(time.time()) * 1000 - self.startTime > 5 * 24 * 60 * 60 * 1000:
             print('trial over!')
 
-        if self.trial == True and self.equity_btc > 0.1:
+        if self.trial == True and self.equity_btc > 1:
             print('trial over!')
         self.client.cancelall()
         self.logger = get_logger( 'root', LOG_LEVEL )
@@ -2558,9 +2558,11 @@ class MarketMaker( object ):
                     size = size * -1
                 #print('positionSize: ' + str(positionSize2))
                 print('size: ' + str(size))
+                if usd_short == 0:
+                	usd_short = 1
                 print('usd_short: ' + str(usd_short))
-                counter = len(self.futures)
-                size = size / counter
+                
+                size = size / 3
                 if size > 1:
                     print('adjust short!')
                     print('size2: ' + str(size))
@@ -2588,8 +2590,8 @@ class MarketMaker( object ):
                         sleep(60 * 0.1)
                     except Exception as e:
                         print(e)
-            except:
-                print('one key, all good!')
+            except Exception as e:
+                print(e)
         print('equity')
         print(self.equity_btc)
         self.update_positions()

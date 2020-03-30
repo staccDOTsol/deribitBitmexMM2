@@ -672,7 +672,7 @@ class MarketMaker( object ):
         print(self.multsShort)
     
     def place_orders( self ):
-        
+
         if self.monitor:
             return None
         
@@ -2295,8 +2295,8 @@ class MarketMaker( object ):
                         sleep(60 * 0.1)
                     except Exception as e:
                         print(e)
-            except:
-                print('one key, all good!')
+            except Exception as e:
+                print(e)
         print('equity')
         print(self.equity_btc)
         self.update_positions()
