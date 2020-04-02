@@ -1085,26 +1085,7 @@ class MarketMaker( object ):
             asks = newasks
 
             bids = newbids
-            if 'PERPETUAL' in fut:
-                newasks = []
-                newbids = []
-                ac = 0
-                for a in asks:
-                    if a not in newasks and ac < MAX_LAYERS:
-                        newasks.append(a)
-                        ac = ac + 1
-                ab = 0
-                for a in bids:
-                    if a not in newbids and ab < MAX_LAYERS:
-                        ab = ab + 1
-                        newbids.append(a)
-                asks = newasks
-
-                bids = newbids
-                print(asks)
-                print(bids)
-                print(' ')
-                print( ' ')
+           
             len_bid_ords = min( len( bid_ords ), nbids ) 
             len_ask_ords    = min( len( ask_ords ), nasks )
             for i in range( min( nbids, nasks, MAX_LAYERS )):
@@ -1277,7 +1258,7 @@ class MarketMaker( object ):
                                         self.client.buy( fut, qty, prc, 'true' )
                                         if 'PERPETUAL' in fut:
                                             bought = True
-                                    if 'PERPETUAL' in fut and bought:
+                                    if 'PERPETUAL' in fut and bought == True:
                                         self.perpbuy = self.perpbuy + 1
 
 
@@ -1319,7 +1300,7 @@ class MarketMaker( object ):
                                     self.client.buy( fut, qty, prc, 'true' )
                                     if 'PERPETUAL' in fut:
                                         bought = True
-                                if 'PERPETUAL' in fut and bought:
+                                if 'PERPETUAL' in fut and bought == True:
                                     self.perpbuy = self.perpbuy + 1
 
 
@@ -1489,7 +1470,7 @@ class MarketMaker( object ):
                                             if 'PERPETUAL' in fut:
                                                 sold = True
                                     
-                                        if 'PERPETUAL' in fut and sold:
+                                        if 'PERPETUAL' in fut and sold == True:
                                             self.perpsell = self.perpsell + 1
 
 
@@ -1524,7 +1505,7 @@ class MarketMaker( object ):
                                     if 'PERPETUAL' in fut:
                                         sold = True
                             
-                                if 'PERPETUAL' in fut and sold:
+                                if 'PERPETUAL' in fut and sold == True:
                                     self.perpsell = self.perpsell + 1
                         except (SystemExit, KeyboardInterrupt):
                             raise
