@@ -97,8 +97,8 @@ MAX_LAYERS          =  2# max orders to layer the ob with on each side
 MKT_IMPACT          =  0      # base 1-sided spread between bid/offer
 NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
-PCT_LIM_LONG        = 30      # % position limit long
-PCT_LIM_SHORT       = 30 # % position limit short
+PCT_LIM_LONG        = 40      # % position limit long
+PCT_LIM_SHORT       = 40 # % position limit short
 
 MIN_LOOP_TIME       =  0.25      # Minimum time between loops
 RISK_CHARGE_VOL     =   250*16  # vol risk charge in bps per 100 vol
@@ -1263,7 +1263,7 @@ class MarketMaker( object ):
                         except:
                             try:
 
-                                if 'PERPETUAL' not in fut or self.perpbuy < 1:
+                                if 'PERPETUAL' not in fut or self.perpbuy < 2:
                                     if 'PERPETUAL' in fut:
                                         self.perpbuy = self.perpbuy + 1
                                     if self.arbmult[fut]['arb'] > 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
@@ -1297,7 +1297,7 @@ class MarketMaker( object ):
                             #abc = 1
                         try:
                             
-                            if 'PERPETUAL' not in fut or self.perpbuy < 1:
+                            if 'PERPETUAL' not in fut or self.perpbuy < 2:
                                 if 'PERPETUAL' in fut:
                                     self.perpbuy = self.perpbuy + 1
                                 if self.arbmult[fut]['arb'] > 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
@@ -1460,7 +1460,7 @@ class MarketMaker( object ):
                         except:
                             try:
                                 if place_asks and i < nasks:
-                                    if 'PERPETUAL' not in fut or self.perpsell < 1:
+                                    if 'PERPETUAL' not in fut or self.perpsell < 2:
                                         if 'PERPETUAL' in fut:
                                             self.perpsell = self.perpsell + 1
                                         if self.arbmult[fut]['arb'] == 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1:
@@ -1488,7 +1488,7 @@ class MarketMaker( object ):
                             #print('edit error')
                             #abc = 1
                         try:
-                            if 'PERPETUAL' not in fut or self.perpsell < 1:
+                            if 'PERPETUAL' not in fut or self.perpsell < 2:
                                 if 'PERPETUAL' in fut:
                                     self.perpsell = self.perpsell + 1
                                 if self.arbmult[fut]['arb'] == 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1:
@@ -1664,10 +1664,11 @@ class MarketMaker( object ):
                 arb = bid/mid
                 if arb > 1:
                     self.arbmult[k]=({"arb": arb, "long": k[:3]+"-PERPETUAL", "short": k})
+                    self.arbmult['BTC-PERPETUAL'] = ({"arb": 1 / arb, "long":'BTC-PERPETUAL', "short": "BTC-PERPETUAL"})
                 elif arb < 1:
                     self.arbmult[k]=({"arb": arb, "long":k, "short": k[:3]+"-PERPETUAL"})
-                else:
-                    self.arbmult[k] [({"arb": 1, "long":k, "short": k[:3]+"-PERPETUAL"})]
+                    self.arbmult['BTC-PERPETUAL'] = ({"arb": 1 / arb, "long":'BTC-PERPETUAL', "short": "BTC-PERPETUAL"})
+                
                 self.thearb = arb
                 print(self.arbmult)
             arbplus = 0
@@ -1689,10 +1690,11 @@ class MarketMaker( object ):
                 if arb > 1:
                     
                     self.arbmult[k]=({"arb": arb, "long": k[:3]+"-PERPETUAL", "short": k})
+                    self.arbmult['BTC-PERPETUAL'] = ({"arb": 1 / arb, "long":'BTC-PERPETUAL', "short": "BTC-PERPETUAL"})
                 
                 if arb < 1:
                     self.arbmult[k]=({"arb": arb, "long":k, "short": k[:3]+"-PERPETUAL"})
-                self.arbmult['BTC-PERPETUAL']=({"arb": 1,     "long":k, "short": k[:3]+"-PERPETUAL"})
+                    self.arbmult['BTC-PERPETUAL'] = ({"arb": 1 / arb, "long":'BTC-PERPETUAL', "short": "BTC-PERPETUAL"})
                 self.thearb = arb
 
                 print(self.arbmult)

@@ -1259,7 +1259,7 @@ class MarketMaker( object ):
                             raise
                         except:
                             try:
-                                if 'PERPETUAL' not in fut or self.perpbuy < 1:
+                                if 'PERPETUAL' not in fut or self.perpbuy < 2:
                                     if 'PERPETUAL' in fut:
                                         self.perpbuy = self.perpbuy + 1
                                     if self.arbmult[fut]['arb'] > 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
@@ -1292,7 +1292,7 @@ class MarketMaker( object ):
                             #abc = 1
                         try:
                             
-                            if 'PERPETUAL' not in fut or self.perpbuy < 1:
+                            if 'PERPETUAL' not in fut or self.perpbuy < 2:
                                 if 'PERPETUAL' in fut:
                                     self.perpbuy = self.perpbuy + 1
                                 if self.arbmult[fut]['arb'] >= 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
@@ -1455,7 +1455,7 @@ class MarketMaker( object ):
                             try:
                                 if place_asks and i < nasks:
 
-                                    if 'PERPETUAL' not in fut or self.perpsell < 1:
+                                    if 'PERPETUAL' not in fut or self.perpsell < 2:
                                         if 'PERPETUAL' in fut:
                                             self.perpsell = self.perpsell + 1
                                         if self.arbmult[fut]['arb'] == 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1:
@@ -1483,7 +1483,7 @@ class MarketMaker( object ):
                             #print('edit error')
                             #abc = 1
                         try:
-                            if 'PERPETUAL' not in fut or self.perpsell < 1:
+                            if 'PERPETUAL' not in fut or self.perpsell < 2:
                                 if 'PERPETUAL' in fut:
                                     self.perpsell = self.perpsell + 1
                                 if self.arbmult[fut]['arb'] == 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1:
@@ -1666,10 +1666,11 @@ class MarketMaker( object ):
                 arb = bid/mid
                 if arb > 1:
                     self.arbmult[k]=({"arb": arb, "long": k[:3]+"-PERPETUAL", "short": k})
+                    self.arbmult['ETH-PERPETUAL'] = ({"arb": 1 / arb, "long":'ETH-PERPETUAL', "short": "ETH-PERPETUAL"})
                 elif arb < 1:
                     self.arbmult[k]=({"arb": arb, "long":k, "short": k[:3]+"-PERPETUAL"})
-                else:
-                    self.arbmult[k] [({"arb": 1, "long":k, "short": k[:3]+"-PERPETUAL"})]
+                    self.arbmult['ETH-PERPETUAL'] = ({"arb": 1 / arb, "long":'ETH-PERPETUAL', "short": "ETH-PERPETUAL"})
+                
                 self.thearb = arb
                 print(self.arbmult)
             arbplus = 0
@@ -1691,10 +1692,11 @@ class MarketMaker( object ):
                 if arb > 1:
                     
                     self.arbmult[k]=({"arb": arb, "long": k[:3]+"-PERPETUAL", "short": k})
+                    self.arbmult['ETH-PERPETUAL'] = ({"arb": 1 / arb, "long":'ETH-PERPETUAL', "short": "ETH-PERPETUAL"})
                 
                 if arb < 1:
                     self.arbmult[k]=({"arb": arb, "long":k, "short": k[:3]+"-PERPETUAL"})
-                self.arbmult['ETH-PERPETUAL']=({"arb": 1,     "long":k, "short": k[:3]+"-PERPETUAL"})
+                    self.arbmult['ETH-PERPETUAL'] = ({"arb": 1 / arb, "long":'ETH-PERPETUAL', "short": "ETH-PERPETUAL"})
                 self.thearb = arb
 
                 print(self.arbmult)
