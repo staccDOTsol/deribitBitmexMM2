@@ -77,10 +77,10 @@ args    = parser.parse_args()
 URL     = 'https://www.deribit.com'#ctrl+h!!!!!
 skews = []
 
-KEY2 = os.environ['KEY2']
-SECRET2 = os.environ['SECRET2']
-KEY     = os.environ['KEY']
-SECRET  = os.environ['SECRET']
+KEY2 = None
+SECRET2 = None
+KEY     = "m1rMvRRU"
+SECRET  = "3aoU1VICHHKZdYkzMuxRb1Ko5Yfz3_ioOhK5idcGKyA"
 
 ULTRACONSERVATIVE = True
 BP                  = 1e-4      # one basis point
@@ -129,7 +129,7 @@ avgavgpnls = []
 class MarketMaker( object ):
     
     def __init__( self, monitor = True, output = True ):
-        self.PCT_QTY_BASE        = 20/2.5/4/1.5/2# pct order qty in bps as pct of acct on each order
+        self.PCT_QTY_BASE        = (20/2.5/4/1.5/2)*15*10# pct order qty in bps as pct of acct on each order
         self.PCT_QTY_BASE        *= BP
         self.predict_1 = 0.5
         self.predict_5 = 0.5
@@ -364,7 +364,7 @@ class MarketMaker( object ):
         self.futures_prv    = cp.deepcopy( self.futures )
         insts               = self.client.getinstruments()
         self.futures        = sort_by_key( { 
-            i[ 'instrumentName' ]: i for i in insts  if 'BTC-27MAR20' not in i['instrumentName'] and ('BTC-' in i['instrumentName'])  and i[ 'kind' ] == 'future'#  
+            i[ 'instrumentName' ]: i for i in insts  if 'ETH-27MAR20' not in i['instrumentName'] and ('ETH-' in i['instrumentName'])  and i[ 'kind' ] == 'future'#  
         } )
         
         for k, v in self.futures.items():
@@ -375,13 +375,14 @@ class MarketMaker( object ):
         
     def get_pct_delta( self ):         
         self.update_status()
-        return sum( self.deltas.values()) / self.equity_btc
+        return sum( self.deltas.values()) / self.equity_ETH
     
     def get_eth( self ):
         r = requests.get('https://api.binance.com/api/v1/ticker/price?symbol=ETHUSDT').json()
         return float(r['price'])
     def get_spot( self ):
-        return self.client.index()[ 'btc' ]
+        r = requests.get('https://api.binance.com/api/v1/ticker/price?symbol=ETHUSDT').json()
+        return float(r['price'])
     
     def get_precision( self, contract ):
         return self.futures[ contract ][ 'pricePrecision' ]
@@ -601,6 +602,7 @@ class MarketMaker( object ):
                 breakfor = 1
                 print('volatility high! taking 1hr break')
 
+
         if gobreak == True:
             self.update_positions()
             self.client.cancelall()
@@ -659,7 +661,7 @@ class MarketMaker( object ):
                 key = 'sizeEth'
                 spot = self.get_eth()
             else:
-                key = 'sizeBtc'
+                key = 'sizeEth'
                 spot = self.get_spot()
             #print(self.positions[k][key])
             if self.positions[k]['size'] > 10:
@@ -686,10 +688,10 @@ class MarketMaker( object ):
         
         for fut in self.futures.keys():
             self.avg_pnl_sl_tp()
-            account         = self.client.account()
+            account         = self.ccxt.fetchBalance({'currency': 'ETH'})
 
             spot            = self.get_spot()
-            bal_btc         = account[ 'equity' ] * 100
+            bal_btc         = account['info']['result'][ 'equity' ] * 100
             pos_lim_long    = bal_btc * PCT_LIM_LONG / len(self.futures)
             pos_lim_short   = bal_btc * PCT_LIM_SHORT / len(self.futures)
 
@@ -702,7 +704,7 @@ class MarketMaker( object ):
             if self.eth is 0:
                 self.eth = 200
             
-            pos             = self.positions[ fut ][ 'sizeBtc' ]
+            pos             = self.positions[ fut ][ 'sizeEth' ]
 
             tte             = max( 0, ( expi - datetime.utcnow()).total_seconds() / SECONDS_IN_DAY )
             pos_decay       = 1.0 - math.exp( -DECAY_POS_LIM * tte )
@@ -778,21 +780,21 @@ class MarketMaker( object ):
                 eps = eps * (1+self.bbw[fut])
             if 3 in self.volatility:
                 eps = eps * (self.atr[fut]/100)
-            if fut == 'BTC-PERPETUAL':
+            if fut == 'ETH-PERPETUAL':
                 print(' ')
                 print('eps of perp before predictions: ' + str(eps))
 
             eps = eps * ((self.predict_1 * self.predict_5) * (self.predict_1 * self.predict_5))
-            if fut == 'BTC-PERPETUAL':
+            if fut == 'ETH-PERPETUAL':
                 print('eps after predictions: ' + str(eps))
                 print(' ')
             riskfac     = math.exp( eps )
 
             if self.positionGains[fut] == True:
-                account         = self.client.account()
+                account         = self.ccxt.fetchBalance({'currency': 'ETH'})
 
                 spot            = self.get_spot()
-                bal_btc         = account[ 'equity' ] * 100
+                bal_btc         = account['info']['result'][ 'equity' ] * 100
                 pos_lim_long    = bal_btc * PCT_LIM_LONG / len(self.futures)
                 pos_lim_short   = bal_btc * PCT_LIM_SHORT / len(self.futures)
 
@@ -810,7 +812,7 @@ class MarketMaker( object ):
                     else:
                         pos = 0
                 else:
-                    pos             = self.positions[ fut ][ 'sizeBtc' ]
+                    pos             = self.positions[ fut ][ 'sizeEth' ]
 
                 tte             = max( 0, ( expi - datetime.utcnow()).total_seconds() / SECONDS_IN_DAY )
                 pos_decay       = 1.0 - math.exp( -DECAY_POS_LIM * tte )
@@ -974,10 +976,10 @@ class MarketMaker( object ):
                 bidsn = []
                 askso = asks1
                 bidso = bids1
-                account         = self.client.account()
+                account         = self.ccxt.fetchBalance({'currency': 'ETH'})
 
                 spot            = self.get_spot()
-                bal_btc         = account[ 'equity' ] * 100
+                bal_btc         = account['info']['result'][ 'equity' ] * 100
                 pos_lim_long2    = bal_btc * (PCT_LIM_LONG ) / len(self.futures)
                 pos_lim_short2   = bal_btc * (PCT_LIM_SHORT ) / len(self.futures)
 
@@ -990,7 +992,7 @@ class MarketMaker( object ):
                 if self.eth is 0:
                     self.eth = 200
                 
-                pos             = self.positions[ fut ][ 'sizeBtc' ]
+                pos             = self.positions[ fut ][ 'sizeEth' ]
 
                 tte             = max( 0, ( expi - datetime.utcnow()).total_seconds() / SECONDS_IN_DAY )
                 pos_decay       = 1.0 - math.exp( -DECAY_POS_LIM * tte )
@@ -1104,9 +1106,7 @@ class MarketMaker( object ):
                     print(qty)  
                     if qty < 0:
                         qty = qty * -1
-                    if 'ETH' in fut:
-                        qty = round( (prc * qtybtc / (con_sz / 1)) * self.get_eth()) 
-                        print(qty)
+
                     
                     positionSize = 0
                     for p in self.positions:
@@ -1130,7 +1130,7 @@ class MarketMaker( object ):
                         p1 = 0.2
                     if p5 < 0.2:
                         p5 = 0.2
-                    if fut == 'BTC-PERPETUAL':
+                    if fut == 'ETH-PERPETUAL':
                         print(' ')
                         print('predict_1: ' + str(p1) + ' & predict_5: ' + str(p5))
                         print('qty of perp to buy before predictions: ' + str(qty))
@@ -1262,10 +1262,10 @@ class MarketMaker( object ):
                                 print(e)
                                 
                     elif gogo == True:
-                        print('self.imselling[BTC-PERPETUAL]')
-                        print(self.imselling['BTC-PERPETUAL'])
-                        print('self.imbuying[BTC-PERPETUAL]')
-                        print(self.imbuying['BTC-PERPETUAL'])
+                        print('self.imselling[ETH-PERPETUAL]')
+                        print(self.imselling['ETH-PERPETUAL'])
+                        print('self.imbuying[ETH-PERPETUAL]')
+                        print(self.imbuying['ETH-PERPETUAL'])
                         #try:
                             #oid = bid_ords[ i ][ 'orderId' ]
                             #self.client.edit( oid, qty, prc )
@@ -1342,9 +1342,6 @@ class MarketMaker( object ):
                     print(qty)    
                     if qty < 0:
                         qty = qty * -1    
-                    if 'ETH' in fut:
-                        
-                        qty = round( (prc * qtybtc / (con_sz / 1)) * self.get_eth())
                     positionSize = 0
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
@@ -1601,12 +1598,12 @@ class MarketMaker( object ):
             eps = eps * (1+self.bbw[fut])
         if 3 in self.volatility:
             eps = eps * (self.atr[fut]/100)
-        if fut == 'BTC-PERPETUAL':
+        if fut == 'ETH-PERPETUAL':
             print(' ')
             print('eps of perp before predictions: ' + str(eps))
 
         eps = eps * self.predict_1 * self.predict_5
-        if fut == 'BTC-PERPETUAL':
+        if fut == 'ETH-PERPETUAL':
             print('eps after predictions: ' + str(eps))
             print(' ')
         riskfac     = math.exp( eps )
@@ -1644,18 +1641,25 @@ class MarketMaker( object ):
 
             bid = m['bid']
             ask=m['ask']
+            mid1 = 0.5 * (bid + ask)
             bbo = self.get_bbo('ETH-PERPETUAL')
             bid_mkt = bbo[ 'bid' ]
             ask_mkt = bbo[ 'ask' ]
             mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
-            arb = bid/mid
+            arb = mid1/mid
+            print('fut mid: ' + str(mid1))
+            print('perp mid: ' + str(mid))
+            if arb > 1.0004:
+                 self.arbplus = self.arbplus + 1
             if arb > 1:
+                
                 self.arbmult[k]=({"arb": arb, "long": k[:3]+"-PERPETUAL", "short": k})
-            elif arb < 1:
+            
+            if arb < 1:
                 self.arbmult[k]=({"arb": arb, "long":k, "short": k[:3]+"-PERPETUAL"})
-            else:
-                self.arbmult[k] [({"arb": 1, "long":k, "short": k[:3]+"-PERPETUAL"})]
+            self.arbmult['ETH-PERPETUAL']=({"arb": 1,     "long":k, "short": k[:3]+"-PERPETUAL"})
             self.thearb = arb
+
             print(self.arbmult)
             print(self.arbmult)
             print(self.arbmult)
@@ -1666,7 +1670,7 @@ class MarketMaker( object ):
             bid = m['bid']
             ask=m['ask']
             mid1 = 0.5 * (bid + ask)
-            bbo = self.get_bbo('BTC-PERPETUAL')
+            bbo = self.get_bbo('ETH-PERPETUAL')
             bid_mkt = bbo[ 'bid' ]
             ask_mkt = bbo[ 'ask' ]
             mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
@@ -1674,14 +1678,14 @@ class MarketMaker( object ):
             print('fut mid: ' + str(mid1))
             print('perp mid: ' + str(mid))
             if arb > 1.0004:
-                self.arbplus = self.arbplus + 1
+                 self.arbplus = self.arbplus + 1
             if arb > 1:
                 
                 self.arbmult[k]=({"arb": arb, "long": k[:3]+"-PERPETUAL", "short": k})
             
             if arb < 1:
                 self.arbmult[k]=({"arb": arb, "long":k, "short": k[:3]+"-PERPETUAL"})
-            self.arbmult['BTC-PERPETUAL']=({"arb": 1,     "long":k, "short": k[:3]+"-PERPETUAL"})
+            self.arbmult['ETH-PERPETUAL']=({"arb": 1,     "long":k, "short": k[:3]+"-PERPETUAL"})
             self.thearb = arb
 
             print(self.arbmult)
@@ -1727,7 +1731,7 @@ class MarketMaker( object ):
                 bid = m['bid']
                 ask=m['ask']
                 mid1 = 0.5 * (bid + ask)
-                bbo = self.get_bbo('BTC-PERPETUAL')
+                bbo = self.get_bbo('ETH-PERPETUAL')
                 bid_mkt = bbo[ 'bid' ]
                 ask_mkt = bbo[ 'ask' ]
                 mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
@@ -1742,7 +1746,7 @@ class MarketMaker( object ):
                 
                 if arb < 1:
                     self.arbmult[k]=({"arb": arb, "long":k, "short": k[:3]+"-PERPETUAL"})
-                self.arbmult['BTC-PERPETUAL']=({"arb": 1,     "long":k, "short": k[:3]+"-PERPETUAL"})
+                self.arbmult['ETH-PERPETUAL']=({"arb": 1,     "long":k, "short": k[:3]+"-PERPETUAL"})
                 self.thearb = arb
 
                 print(self.arbmult)
@@ -1855,7 +1859,7 @@ class MarketMaker( object ):
                     else:
                         self.positionGains[p['instrument']] = mid > p['averagePrice']
                     positionPrices[p['instrument']] = mid < p['averagePrice']
-                    positionPrices['BTC-PERPETUAL'] = mid > p['averagePrice']
+                    positionPrices['ETH-PERPETUAL'] = mid > p['averagePrice']
             for p in self.positions:
                 positionSize = positionSize + self.positions[p]['size']
                 if self.positions[p]['size'] < 0:
@@ -1863,13 +1867,13 @@ class MarketMaker( object ):
                 else:   
                     positionPos = positionPos + self.positions[p]['size']
             buyPerp = False
-            if 'BTC-PERPETUAL' in positionPrices:
-                if positionPrices['BTC-PERPETUAL'] == False:
+            if 'ETH-PERPETUAL' in positionPrices:
+                if positionPrices['ETH-PERPETUAL'] == False:
                     buyPerp = True
             print('buyperp ' + str(buyPerp))
             actuallyBuyingPerp = False
-            if 'BTC-PERPETUAL' in self.positions:
-                if self.positions['BTC-PERPETUAL']['size'] > 0:
+            if 'ETH-PERPETUAL' in self.positions:
+                if self.positions['ETH-PERPETUAL']['size'] > 0:
                     actuallyBuyingPerp = True
             print('actuallyBuyingPerp: ' + str(actuallyBuyingPerp))
 
@@ -2191,13 +2195,13 @@ class MarketMaker( object ):
         self.equity_btc_init    = self.equity_btc
     def avg_pnl_sl_tp ( self ):
         pls = []
-        account = self.client.account()
+        account = self.ccxt.fetchBalance({'currency': 'ETH'})
         for p in self.client.positions():
             try:
                 if 'ETH' in p['instrument']:
                     pl = p['floatingPl']  / p['sizeEth'] * 100 # needs fixing
                 else:
-                    pl = p['floatingPl']  / account[ 'equity' ] 
+                    pl = p['floatingPl']  / account['info']['result'][ 'equity' ] 
                 direction = p['direction']
                
 
@@ -2366,7 +2370,10 @@ class MarketMaker( object ):
                 if '1m' in resp: 
                     mmbot.predict_1 = float(resp['1m'].replace('"',""))
                     mmbot.predict_5 = float(resp['5m'].replace('"',""))
-
+                    #if mmbot.predict_1 > 1:
+                    #    mmbot.predict_1 = old1
+                   # if mmbot.predict_5 > 1:
+                   #     mmbot.predict_5 = old5
                     if mmbot.predict_1 < 0:
                         mmbot.predict_1 = old1
                     if mmbot.predict_5 < 0:
@@ -2389,9 +2396,9 @@ class MarketMaker( object ):
                 positionPos = positionPos - self.positions[p]['size']
             else:   
                 positionPos = positionPos + self.positions[p]['size']
-        account = self.client.account()
+        account = self.ccxt.fetchBalance({'currency': 'ETH'})
         spot    = self.get_spot()
-        self.equity_btc = account[ 'equity' ]
+        self.equity_btc = account['info']['result'][ 'equity' ]
         
         self.equity_usd = self.equity_btc * spot
         if self.veryfirst == True:
@@ -2405,8 +2412,8 @@ class MarketMaker( object ):
         except:
             print('only 1 account! ok!')
       
-        if os.path.isfile('bals.json'):
-            with open('bals.json') as json_file:
+        if os.path.isfile('bals-eth.json'):
+            with open('bals-eth.json') as json_file:
                 data = json.load(json_file)
                 self.startTime = data['startTime']
                 self.startbtc = data['startbtc']
@@ -2429,7 +2436,7 @@ class MarketMaker( object ):
 
             data['startbtc2'] = self.startbtc2
             data['startUsd2'] = self.startUsd2
-            with open('bals.json', 'w') as outfile:
+            with open('bals-eth.json', 'w') as outfile:
                 json.dump(data, outfile)
 
         
@@ -2519,7 +2526,7 @@ class MarketMaker( object ):
                             ask_mkt = bbo[ 'ask' ]
                             mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
                             print(p)
-                            #self.client2.sell(  p, size, mid * 0.98, 'false' )
+                            self.client2.sell(  p, size, mid * 0.98, 'false' )
 
                         #else:
 
@@ -2542,17 +2549,17 @@ class MarketMaker( object ):
             self.multsShort[k] = 1
             self.multsLong[k] = 1
       #  self.deltas = OrderedDict( 
-      #      { k: self.positions[ k ][ 'sizeBtc' ] for k in self.futures.keys()}
+      #      { k: self.positions[ k ][ 'sizeEth' ] for k in self.futures.keys()}
       #  )
       
-      #  self.deltas[ BTC_SYMBOL ] = account[ 'equity' ]        
+      #  self.deltas[ BTC_SYMBOL ] = account['info']['result'][ 'equity' ]        
         
         
     def update_positions( self ):
 
         self.positions  = OrderedDict( { f: {
             'size':         0,
-            'sizeBtc':      0,
+            'sizeEth':      0,
             'indexPrice':   None,
             'markPrice':    None
         } for f in self.futures.keys() } )
@@ -2568,7 +2575,7 @@ class MarketMaker( object ):
 
         self.positions2  = OrderedDict( { f: {
             'size':         0,
-            'sizeBtc':      0,
+            'sizeEth':      0,
             'indexPrice':   None,
             'markPrice':    None
         } for f in self.futures.keys() } )

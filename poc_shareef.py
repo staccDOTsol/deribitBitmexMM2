@@ -77,10 +77,10 @@ args    = parser.parse_args()
 URL     = 'https://www.deribit.com'#ctrl+h!!!!!
 skews = []
 
-KEY2 = os.environ['KEY2']
-SECRET2 = os.environ['SECRET2']
-KEY     = os.environ['KEY']
-SECRET  = os.environ['SECRET']
+KEY2 = "5HkSPCwo"
+SECRET2 = "z5fHc3FFB_SrVmEK6z0Unc-CjtHVU9_5pNMCdbXw_K0"
+KEY     = "VC4d7Pj1"
+SECRET  = "IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
 
 ULTRACONSERVATIVE = True
 BP                  = 1e-4      # one basis point
@@ -1674,7 +1674,7 @@ class MarketMaker( object ):
             print('fut mid: ' + str(mid1))
             print('perp mid: ' + str(mid))
             if arb > 1.0004:
-                self.arbplus = self.arbplus + 1
+                 self.arbplus = self.arbplus + 1
             if arb > 1:
                 
                 self.arbmult[k]=({"arb": arb, "long": k[:3]+"-PERPETUAL", "short": k})
@@ -2366,7 +2366,10 @@ class MarketMaker( object ):
                 if '1m' in resp: 
                     mmbot.predict_1 = float(resp['1m'].replace('"',""))
                     mmbot.predict_5 = float(resp['5m'].replace('"',""))
-
+                   # if mmbot.predict_1 > 1:
+                    #    mmbot.predict_1 = old1
+                   # if mmbot.predict_5 > 1:
+                   #     mmbot.predict_5 = old5
                     if mmbot.predict_1 < 0:
                         mmbot.predict_1 = old1
                     if mmbot.predict_5 < 0:
@@ -2405,8 +2408,8 @@ class MarketMaker( object ):
         except:
             print('only 1 account! ok!')
       
-        if os.path.isfile('bals.json'):
-            with open('bals.json') as json_file:
+        if os.path.isfile('bals-poc.json'):
+            with open('bals-poc.json') as json_file:
                 data = json.load(json_file)
                 self.startTime = data['startTime']
                 self.startbtc = data['startbtc']
@@ -2429,7 +2432,7 @@ class MarketMaker( object ):
 
             data['startbtc2'] = self.startbtc2
             data['startUsd2'] = self.startUsd2
-            with open('bals.json', 'w') as outfile:
+            with open('bals-poc.json', 'w') as outfile:
                 json.dump(data, outfile)
 
         
@@ -2519,7 +2522,7 @@ class MarketMaker( object ):
                             ask_mkt = bbo[ 'ask' ]
                             mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
                             print(p)
-                            #self.client2.sell(  p, size, mid * 0.98, 'false' )
+#                            self.client2.sell(  p, size, mid * 0.98, 'false' )
 
                         #else:
 
