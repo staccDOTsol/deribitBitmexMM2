@@ -752,9 +752,9 @@ class MarketMaker( object ):
             positionSize = 0
             for p in self.positions:
                 positionSize = positionSize + self.positions[p]['size']
-            if positionSize < 0 and nasks == 0:
+            if positionSize > 0 and nasks == 0:
                 nasks = 2
-            if positionSize > 0 and nbids == 0:
+            if positionSize < 0 and nbids == 0:
                 nbids = 2
             place_bids = nbids > 0
             place_asks = nasks > 0    
