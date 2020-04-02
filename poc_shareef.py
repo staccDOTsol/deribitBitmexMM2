@@ -1252,7 +1252,7 @@ class MarketMaker( object ):
                                             bought = True
 
 
-                                    if self.arbmult[fut]['arb'] < 1 and  positionSize - qty /  2<= 0:
+                                    if self.arbmult[fut]['arb'] < 1 and  positionSize - qty /  2<= self.maxqty * 2.5 * 5:
                                         self.client.buy(  fut, qty, prc, 'true' )
                                         if 'PERPETUAL' in fut:
                                             bought = True
@@ -1292,7 +1292,7 @@ class MarketMaker( object ):
                                         bought = True
 
 
-                                if self.arbmult[fut]['arb'] < 1 and  positionSize - qty /  2<= 0:
+                                if self.arbmult[fut]['arb'] < 1 and  positionSize - qty /  2<= self.maxqty * 2.5 * 5:
                                     self.client.buy(  fut, qty, prc, 'true' )
                                     if 'PERPETUAL' in fut:
                                         bought = True
@@ -1460,7 +1460,7 @@ class MarketMaker( object ):
                                             self.client.sell(  fut, qty, prc, 'true' )
                                             if 'PERPETUAL' in fut:
                                                 sold = True
-                                        if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2>= 0:
+                                        if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2>=  self.maxqty * 2.5 * 5 * -1:
                                             self.client.sell( fut, qty, prc, 'true' )
                                             if 'PERPETUAL' in fut:
                                                 sold = True
@@ -1495,7 +1495,7 @@ class MarketMaker( object ):
                                     self.client.sell(  fut, qty, prc, 'true' )
                                     if 'PERPETUAL' in fut:
                                         sold = True
-                                if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2>= 0:
+                                if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2>=  self.maxqty * 2.5 * 5 * -1:
                                     self.client.sell( fut, qty, prc, 'true' )
                                     if 'PERPETUAL' in fut:
                                         sold = True
@@ -2437,7 +2437,7 @@ class MarketMaker( object ):
 
                     print('0 on the dot 222!')
                     print(self.arbmult)
-                    if self.arbmult[p]['arb'] < 1 :
+                    if self.arbmult[p]['arb'] > 1 :
                         self.client.sell(  p, self.maxqty * 2.5 * 5 * 2 / len(self.futures), mid * 0.98, 'false' )
                     else:
                         self.client.buy(  p, self.maxqty * 2.5 * 5 * 2 / len(self.futures), mid * 1.02, 'false' )
