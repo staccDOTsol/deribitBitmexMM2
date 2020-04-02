@@ -2419,7 +2419,7 @@ class MarketMaker( object ):
                 skewingpos = skewingpos + 1
             else:
                 skewingneg = skewingneg + 1
-        if positionSize is  and (skewingpos is 0 and skewingneg is 0):  
+        if positionSize is  0 and (skewingpos is 0 and skewingneg is 0):  
             print('0 on the dot 111!')
             print(self.arbmult)
           
