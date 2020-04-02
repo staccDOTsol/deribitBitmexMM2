@@ -101,7 +101,7 @@ PCT_LIM_LONG        = 30      # % position limit long
 PCT_LIM_SHORT       = 30 # % position limit short
 
 MIN_LOOP_TIME       =  0.25      # Minimum time between loops
-RISK_CHARGE_VOL     =   250*16  # vol risk charge in bps per 100 vol
+RISK_CHARGE_VOL     =   140*16  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
 WAVELEN_MTIME_CHK   = 15        # time in seconds between check for file change
