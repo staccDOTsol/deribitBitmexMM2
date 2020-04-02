@@ -1600,11 +1600,13 @@ class MarketMaker( object ):
             if arb > 1:
                 
                 self.arbmult[k]=({"arb": arb, "long": k[:3]+"-PERPETUAL", "short": k})
+                self.arbmult['ETH-PERPETUAL'] = ({"arb": 1 / arb, "long":'ETH-PERPETUAL', "short": "ETH-PERPETUAL"})
             
             if arb < 1:
                 self.arbmult[k]=({"arb": arb, "long":k, "short": k[:3]+"-PERPETUAL"})
+                self.arbmult['ETH-PERPETUAL'] = ({"arb": 1 / arb, "long":'ETH-PERPETUAL', "short": "ETH-PERPETUAL"})
             self.thearb = arb
-            self.arbmult['ETH-PERPETUAL'] = ({"arb": 1 / arb, "long":'ETH-PERPETUAL', "short": "ETH-PERPETUAL"})
+            
             print(self.arbmult)
             print(self.arbmult)
             print(self.arbmult)
@@ -1627,10 +1629,11 @@ class MarketMaker( object ):
             if arb > 1:
                 
                 self.arbmult[k]=({"arb": arb, "long": k[:3]+"-PERPETUAL", "short": k})
+                self.arbmult['ETH-PERPETUAL'] = ({"arb": 1 / arb, "long":'ETH-PERPETUAL', "short": "ETH-PERPETUAL"})
             
             if arb < 1:
                 self.arbmult[k]=({"arb": arb, "long":k, "short": k[:3]+"-PERPETUAL"})
-            self.arbmult['ETH-PERPETUAL'] = ({"arb": 1 / arb, "long":'ETH-PERPETUAL', "short": "ETH-PERPETUAL"})
+                self.arbmult['ETH-PERPETUAL'] = ({"arb": 1 / arb, "long":'ETH-PERPETUAL', "short": "ETH-PERPETUAL"})
             self.thearb = arb
 
             print(self.arbmult)
