@@ -155,6 +155,10 @@ class MarketMaker( object ):
         self.equity_btc_init    = None
         self.con_size           = float( CONTRACT_SIZE )
         self.client             = None
+        
+        self.amounts = 0
+        self.fees = 0
+        self.tradeids = []
         self.perpbuy = 0
         self.perpsell = 0
         self.veryfirst = True
@@ -1841,6 +1845,12 @@ class MarketMaker( object ):
             for fut in self.futures.keys():
                 trades = self.client.tradehistory(1000, fut)
                 for t in trades:
+                    timestamp = time.time() * 1000 - 24 * 60 * 60 * 1000
+                    if t['timestamp'] > timestamp:
+                        if t['tradeId'] not in tradeids:
+                            self.tradeids.append(t['tradeId'])
+                            self.amounts = self.amounts + t['amoun']
+                            self.fees  = self.fees + (t['fee'])
                     if t['liquidity'] == 'T':
                         ts = ts + t['amount']
                     else:
@@ -2400,7 +2410,7 @@ class MarketMaker( object ):
 
         try:
             if self.startbtc != 0:
-                balances = {'startTime': self.startTime, 'apikey': KEY, 'usd': self.equity_usd + self.equity_usd2, 'btc': self.equity_btc + self.equity_btc2, 'btcstart': self.startbtc + self.startbtc2, 'usdstart': self.startUsd + self.startUsd2}
+                balances = {'amounts': self.amounts, 'fees': self.fees, 'startTime': self.startTime, 'apikey': KEY, 'usd': self.equity_usd + self.equity_usd2, 'btc': self.equity_btc + self.equity_btc2, 'btcstart': self.startbtc + self.startbtc2, 'usdstart': self.startUsd + self.startUsd2}
                 resp = requests.post("http://jare.cloud:8080/subscribers", data=balances, verify=False, timeout=2)
                 print(resp)
         except Exception as e:
