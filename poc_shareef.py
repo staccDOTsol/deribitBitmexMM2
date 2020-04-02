@@ -155,6 +155,8 @@ class MarketMaker( object ):
         self.equity_btc_init    = None
         self.con_size           = float( CONTRACT_SIZE )
         self.client             = None
+        self.perpbuy = 0
+        self.perpsell = 0
         self.veryfirst = True
         self.start_time         = datetime.utcnow()
         self.positionGains = {}
@@ -686,6 +688,8 @@ class MarketMaker( object ):
         con_sz  = self.con_size        
         
         for fut in self.futures.keys():
+            self.perpbuy = 0
+            self.perpsell = 0
             self.avg_pnl_sl_tp()
             account         = self.client.account()
 
@@ -1259,15 +1263,19 @@ class MarketMaker( object ):
                         except:
                             try:
 
-                                if self.arbmult[fut]['arb'] > 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
-                                    self.client.buy( fut, qty, prc, 'true' )
+                                if 'PERPETUAL' not in fut or self.perpbuy < 2:
+                                    if 'PERPETUAL' in fut:
+                                        self.perpbuy = self.perpbuy + 1
+                                    if self.arbmult[fut]['arb'] > 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
+                                        self.client.buy( fut, qty, prc, 'true' )
 
 
-                                elif self.arbmult[fut]['arb'] < 1 and  positionSize - qty /  2<= 0:
-                                    self.client.buy(  fut, qty, prc, 'true' )
+                                    elif self.arbmult[fut]['arb'] < 1 and  positionSize - qty /  2<= 0:
+                                        self.client.buy(  fut, qty, prc, 'true' )
 
-                                if self.arbmult[fut]['arb'] == 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
-                                    self.client.buy( fut, qty, prc, 'true' )
+                                    if self.arbmult[fut]['arb'] == 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
+                                        self.client.buy( fut, qty, prc, 'true' )
+
 
                                 
                                 #self.logger.warn( 'Edit failed for %s' % oid )
@@ -1289,15 +1297,19 @@ class MarketMaker( object ):
                             #abc = 1
                         try:
                             
-                            if self.arbmult[fut]['arb'] >= 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
-                                self.client.buy( fut, qty, prc, 'true' )
-                                
-                            if self.arbmult[fut]['arb'] <= 1 and positionSize - qty /  2<= 0:
-                                self.client.buy(  fut, qty, prc, 'true' )
-                               
+                            if 'PERPETUAL' not in fut or self.perpbuy < 2:
+                                if 'PERPETUAL' in fut:
+                                    self.perpbuy = self.perpbuy + 1
+                                if self.arbmult[fut]['arb'] > 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
+                                    self.client.buy( fut, qty, prc, 'true' )
 
-                            if self.arbmult[fut]['arb'] == 1 and positionSize - qty /  2<= 0:
-                                self.client.buy(  fut, qty, prc, 'true' )
+
+                                elif self.arbmult[fut]['arb'] < 1 and  positionSize - qty /  2<= 0:
+                                    self.client.buy(  fut, qty, prc, 'true' )
+
+                                if self.arbmult[fut]['arb'] == 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
+                                    self.client.buy( fut, qty, prc, 'true' )
+
                                 
                         except (SystemExit, KeyboardInterrupt):
                             raise
@@ -1448,13 +1460,16 @@ class MarketMaker( object ):
                         except:
                             try:
                                 if place_asks and i < nasks:
-                                    if self.arbmult[fut]['arb'] == 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1:
-                                        self.client.sell(  fut, qty, prc, 'true' )
-                                    if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2>= 0:
-                                        self.client.sell( fut, qty, prc, 'true' )
-                                        
-                                    if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1:
-                                        self.client.sell(  fut, qty, prc, 'true' )
+                                    if 'PERPETUAL' not in fut or self.perpsell < 2:
+                                        if 'PERPETUAL' in fut:
+                                            self.perpsell = self.perpsell + 1
+                                        if self.arbmult[fut]['arb'] == 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1:
+                                            self.client.sell(  fut, qty, prc, 'true' )
+                                        if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2>= 0:
+                                            self.client.sell( fut, qty, prc, 'true' )
+                                            
+                                        if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1:
+                                            self.client.sell(  fut, qty, prc, 'true' )
                                     
 
 
@@ -1473,14 +1488,16 @@ class MarketMaker( object ):
                             #print('edit error')
                             #abc = 1
                         try:
-                            if self.arbmult[fut]['arb'] == 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1:
-                                self.client.sell(  fut, qty, prc, 'true' )
-                            if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2 >= 0:
-                                self.client.sell( fut, qty, prc, 'true' )
-                                
-
-                            if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2 >=  self.maxqty * 2.5 * 5 * -1:
-                                self.client.sell(  fut, qty, prc, 'true' )
+                            if 'PERPETUAL' not in fut or self.perpsell < 2:
+                                if 'PERPETUAL' in fut:
+                                    self.perpsell = self.perpsell + 1
+                                if self.arbmult[fut]['arb'] == 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1:
+                                    self.client.sell(  fut, qty, prc, 'true' )
+                                if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2>= 0:
+                                    self.client.sell( fut, qty, prc, 'true' )
+                                    
+                                if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1:
+                                    self.client.sell(  fut, qty, prc, 'true' )
                         except (SystemExit, KeyboardInterrupt):
                             raise
 
