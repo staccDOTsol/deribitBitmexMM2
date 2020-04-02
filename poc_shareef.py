@@ -1582,7 +1582,7 @@ class MarketMaker( object ):
             else:
                 self.arbmult[k] = [({"arb": 1, "long":k, "short": k[:3]+"-PERPETUAL"})]
             self.thearb = arb
-            self.arbmult['BTC-PERPETUAL'] = ({"arb": 1, "long":'BTC-PERPETUAL', "short": "BTC-PERPETUAL"})
+            self.arbmult['BTC-PERPETUAL'] = ({"arb": 1 / arb, "long":'BTC-PERPETUAL', "short": "BTC-PERPETUAL"})
             print(self.arbmult)
             print(self.arbmult)
             print(self.arbmult)
@@ -1609,7 +1609,7 @@ class MarketMaker( object ):
             if arb < 1:
                 self.arbmult[k]=({"arb": arb, "long":k, "short": k[:3]+"-PERPETUAL"})
             self.thearb = arb
-            self.arbmult['BTC-PERPETUAL'] = ({"arb": 1, "long":'BTC-PERPETUAL', "short": "BTC-PERPETUAL"})
+            self.arbmult['BTC-PERPETUAL'] = ({"arb": 1 / arb, "long":'BTC-PERPETUAL', "short": "BTC-PERPETUAL"})
             print(self.arbmult)
             print(self.arbmult)
             print(self.arbmult)
