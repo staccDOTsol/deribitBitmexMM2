@@ -705,7 +705,7 @@ class MarketMaker( object ):
             
             pos             = self.positions[ fut ][ 'sizeBtc' ]
 
-            tte             = max( 0, ( expi - datetime.utcnow()).total_seconds() / SECONDS_IN_DAY )
+            tte             = 0#max( 0, ( expi - datetime.utcnow()).total_seconds() / SECONDS_IN_DAY )
             pos_decay       = 1.0 - math.exp( -DECAY_POS_LIM * tte )
             #pos_lim_long   *= pos_decay
             #pos_lim_short  *= pos_decay
