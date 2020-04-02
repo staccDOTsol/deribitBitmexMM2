@@ -1081,6 +1081,26 @@ class MarketMaker( object ):
             asks = newasks
 
             bids = newbids
+            if 'PERPETUAL' in fut:
+                newasks = []
+                newbids = []
+                ac = 0
+                for a in asks:
+                    if a not in newasks and ac < MAX_LAYERS:
+                        newasks.append(a)
+                        ac = ac + 1
+                ab = 0
+                for a in bids:
+                    if a not in newbids and ab < MAX_LAYERS:
+                        ab = ab + 1
+                        newbids.append(a)
+                asks = newasks
+
+                bids = newbids
+                print(asks)
+                print(bids)
+                print(' ')
+                print( ' ')
             len_bid_ords = min( len( bid_ords ), nbids ) 
             len_ask_ords    = min( len( ask_ords ), nasks )
             for i in range( min( nbids, nasks, MAX_LAYERS )):

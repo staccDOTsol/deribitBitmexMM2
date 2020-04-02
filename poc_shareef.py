@@ -1070,21 +1070,7 @@ class MarketMaker( object ):
                         asksn.append(bidso[1])
                 print(bidsn)
                 bids = bidsn
-                newasks = []
-                newbids = []
-                for a in asks:
-                    if a not in newasks:
-                        newasks.append(a)
-                for a in bids:
-                    if a not in newbids:
-                        newbids.append(a)
-                asks = newasks
-
-                bids = newbids
-                print(asks)
-                print(bids)
-                print(' ')
-                print( ' ')
+                
                 ords        = self.client.getopenorders( fut )
                 cancel_oids = []
                 bid_ords    = ask_ords = []
@@ -1098,7 +1084,26 @@ class MarketMaker( object ):
                     
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
                     len_ask_ords    = min( len( ask_ords ), nasks )
+            if 'PERPETUAL' in fut:
+                newasks = []
+                newbids = []
+                ac = 0
+                for a in asks:
+                    if a not in newasks and ac < MAX_LAYERS:
+                        newasks.append(a)
+                        ac = ac + 1
+                ab = 0
+                for a in bids:
+                    if a not in newbids and ab < MAX_LAYERS:
+                        ab = ab + 1
+                        newbids.append(a)
+                asks = newasks
 
+                bids = newbids
+                print(asks)
+                print(bids)
+                print(' ')
+                print( ' ')
             len_bid_ords = min( len( bid_ords ), nbids ) 
             len_ask_ords    = min( len( ask_ords ), nasks )
             for i in range( min( nbids, nasks, MAX_LAYERS )):
