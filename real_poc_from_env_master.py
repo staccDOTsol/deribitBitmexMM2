@@ -1845,7 +1845,7 @@ class MarketMaker( object ):
                 trades = self.client.tradehistory(1000, fut)
                 for t in trades:
                     timestamp = time.time() * 1000 - 24 * 60 * 60 * 1000
-                    if t['timestamp'] > timestamp:
+                    if t['timeStamp'] > timestamp:
                         if t['tradeId'] not in tradeids:
                             
                             self.tradeids.append(t['tradeId'])
