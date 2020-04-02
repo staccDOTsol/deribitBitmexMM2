@@ -1846,7 +1846,7 @@ class MarketMaker( object ):
                 for t in trades:
                     timestamp = time.time() * 1000 - 24 * 60 * 60 * 1000
                     if t['timeStamp'] > timestamp:
-                        if t['tradeId'] not in tradeids:
+                        if t['tradeId'] not in self.tradeids:
                             
                             self.tradeids.append(t['tradeId'])
                             self.amounts = self.amounts + t['amoun']
