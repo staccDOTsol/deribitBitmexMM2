@@ -1676,7 +1676,7 @@ class MarketMaker( object ):
                 elif arb < 1:
                     self.arbmult[k]=({"arb": arb, "long":k, "short": k[:3]+"-PERPETUAL"})
                     self.arbmult['BTC-PERPETUAL'] = ({"arb": 1 / arb, "long":'BTC-PERPETUAL', "short": "BTC-PERPETUAL"})
-                               self.thearb = arb
+                elf.thearb = arb
                 print(self.arbmult)
             arbplus = 0
             for k in btclist:
