@@ -2411,9 +2411,15 @@ class MarketMaker( object ):
         self.update_positions()
         self.update_positions2()
        	positionSize = 0
+        skewingpos = 0
+        skewingneg = 0
         for p in self.positions:
             positionSize = positionSize + self.positions[p]['size']
-        if positionSize is 0:  
+            if self.positions[p]['size'] > 0:
+                skewingpos = skewingpos + 1
+            else:
+                skewingneg = skewingneg + 1
+        if positionSize is  and (skewingpos is 0 and skewingneg is 0):  
             print('0 on the dot 111!')
             print(self.arbmult)
           
