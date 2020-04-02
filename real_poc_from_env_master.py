@@ -409,7 +409,7 @@ class MarketMaker( object ):
             if diff > self.diff3:
                 self.diff3 = diff
             print('self diff3 : ' +str(self.diff3))
-            if self.diff3 > self.maxMaxDD:
+            if self.diff3 > self.maxMaxDD and self.diff3 != 0:
                 print('broke max max dd! sleep 24hr')
                 self.client.cancelall()
                 self.sls = self.sls + 1
@@ -452,7 +452,7 @@ class MarketMaker( object ):
                 self.diff3 = 0
                 self.startUsd2 = self.equity_usd2
                 self.startUsd = self.equity_usd
-            if self.diff2 < self.minMaxDD:
+            if self.diff2 < self.minMaxDD and self.diff2 != 0:
                 print('broke min max dd! sleep 24hr')
                 self.client.cancelall()
                 self.sls = self.sls + 1
