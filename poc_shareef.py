@@ -1851,7 +1851,7 @@ class MarketMaker( object ):
                     if t['timeStamp'] > timestamp:
                         if t['tradeId'] not in self.tradeids:
                             self.tradeids.append(t['tradeId'])
-                            self.amounts = self.amounts + t['amoun']
+                            self.amounts = self.amounts + t['amount']
                             self.fees  = self.fees + (t['fee'])
                     if t['liquidity'] == 'T':
                         ts = ts + t['amount']
