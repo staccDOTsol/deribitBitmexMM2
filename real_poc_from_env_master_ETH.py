@@ -129,7 +129,7 @@ avgavgpnls = []
 class MarketMaker( object ):
     
     def __init__( self, monitor = True, output = True ):
-        self.PCT_QTY_BASE        = (20/2.5/4/1.5/2)*15*10# pct order qty in bps as pct of acct on each order
+        self.PCT_QTY_BASE        = (120/2.5/4/1.5/2)*15*10# pct order qty in bps as pct of acct on each order
         self.PCT_QTY_BASE        *= BP
         self.predict_1 = 0.5
         self.predict_5 = 0.5
