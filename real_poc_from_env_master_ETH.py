@@ -1850,13 +1850,12 @@ class MarketMaker( object ):
             for fut in self.futures.keys():
                 trades = self.client.tradehistory(1000, fut)
                 for t in trades:
-                    timestamp = time.time() * 1000 - 24 * 60 * 60 * 1000
-                    if t['timeStamp'] > timestamp:
-                        if t['tradeId'] not in self.tradeids:
-                            
-                            self.tradeids.append(t['tradeId'])
-                            self.amounts = self.amounts + t['amount']
-                            self.fees = self.fees + (t['fee'])
+
+                    if t['tradeId'] not in self.tradeids:
+                        
+                        self.tradeids.append(t['tradeId'])
+                        self.amounts = self.amounts + t['amount']
+                        self.fees = self.fees + (t['fee'])
                     if t['liquidity'] == 'T':
                         ts = ts + t['amount']
                     else:
