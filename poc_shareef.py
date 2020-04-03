@@ -79,8 +79,8 @@ skews = []
 
 KEY2 = "5HkSPCwo"
 SECRET2 = "z5fHc3FFB_SrVmEK6z0Unc-CjtHVU9_5pNMCdbXw_K0"
-KEY     = "7x5cttEC"#"VC4d7Pj1"
-SECRET  = "h_xxD-huOZOyNWouHh_yQnRyMkKyQyUv-EX96ReUHmM"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
+KEY     = "VC4d7Pj1"
+SECRET  = "IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
 
 ULTRACONSERVATIVE = True
 BP                  = 1e-4      # one basis point
@@ -928,7 +928,7 @@ class MarketMaker( object ):
                     len_bid_ords    = min( len( bid_ords ), nbids )
                     bid0            = mid_mkt * math.exp( -MKT_IMPACT )
                     if self.positions[fut]['size'] > 0 and self.positionGains[fut] == True:
-                        bids    = [ bid0 * riskfac * 0.5 ** -i for i in range( 1, int(nbids) + 1 ) ]
+                        bids    = [ bid0 * riskfac * 1 ** -i for i in range( 1, int(nbids) + 1 ) ]
                     else:
                         bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
                  
@@ -942,7 +942,7 @@ class MarketMaker( object ):
                     ask0            = mid_mkt * math.exp(  MKT_IMPACT )
                     if self.positions[fut]['size'] < 0 and self.positionGains[fut] == True:
                      
-                        asks    = [ ask0 * riskfac * 0.5 ** i for i in range( 1, int(nasks) + 1 ) ]
+                        asks    = [ ask0 * riskfac * 1 ** i for i in range( 1, int(nasks) + 1 ) ]
                     else:   
                         asks    = [ ask0 * riskfac  ** i for i in range( 1, int(nasks) + 1 ) ]
                        
@@ -971,7 +971,7 @@ class MarketMaker( object ):
                     len_bid_ords    = min( len( bid_ords ), nbids )
                     bid0            = mid_mkt * math.exp( -MKT_IMPACT )
                     if self.positions[fut]['size'] > 0 and self.positionGains[fut] == True:
-                        bids1    = [ bid0 * riskfac * 0.5 ** -i for i in range( 1, int(nbids) + 1 ) ]
+                        bids1    = [ bid0 * riskfac * 1 ** -i for i in range( 1, int(nbids) + 1 ) ]
                     else:
                         bids1    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
                  
@@ -986,7 +986,7 @@ class MarketMaker( object ):
                     ask0            = mid_mkt * math.exp(  MKT_IMPACT )
                     if self.positions[fut]['size'] < 0 and self.positionGains[fut] == True:
                      
-                        asks1    = [ ask0 * riskfac * 0.5 ** i for i in range( 1, int(nasks) + 1 ) ]
+                        asks1    = [ ask0 * riskfac * 1 ** i for i in range( 1, int(nasks) + 1 ) ]
                     else:   
                         asks1    = [ ask0 * riskfac  ** i for i in range( 1, int(nasks) + 1 ) ]
                        
@@ -1008,7 +1008,7 @@ class MarketMaker( object ):
                     len_bid_ords    = min( len( bid_ords ), nbids )
                     bid0            = mid_mkt * math.exp( -MKT_IMPACT )
                     if self.positions[fut]['size'] > 0 and self.positionGains[fut] == True:
-                        bids1    = [ bid0 * riskfac * 0.5 ** -i for i in range( 1, int(nbids) + 1 ) ]
+                        bids1    = [ bid0 * riskfac * 1 ** -i for i in range( 1, int(nbids) + 1 ) ]
                     else:
                         bids1    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
                  
@@ -1023,7 +1023,7 @@ class MarketMaker( object ):
                     ask0            = mid_mkt * math.exp(  MKT_IMPACT )
                     if self.positions[fut]['size'] < 0 and self.positionGains[fut] == True:
                      
-                        asks1    = [ ask0 * riskfac * 0.5 ** i for i in range( 1, int(nasks) + 1 ) ]
+                        asks1    = [ ask0 * riskfac * 1 ** i for i in range( 1, int(nasks) + 1 ) ]
                     else:   
                         asks1    = [ ask0 * riskfac  ** i for i in range( 1, int(nasks) + 1 ) ]
                        
@@ -1239,7 +1239,7 @@ class MarketMaker( object ):
 
 
                     if self.positionGains[fut] == True and self.positions[fut]['size'] > 0 and positionSize < 0:
-                        qty = qty * 1.5
+                        qty = qty * 1.25
                     
 
                     print(qty)
@@ -1445,7 +1445,7 @@ class MarketMaker( object ):
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
                     if self.positionGains[fut] == True  and self.positions[fut]['size'] < 0 and positionSize > 0:
-                        qty = qty * 1.5
+                        qty = qty * 1.25
                     
                     if qty < 1:
                         qty = 1
@@ -1628,7 +1628,7 @@ class MarketMaker( object ):
         
         bid0            = mid_mkt * math.exp( -MKT_IMPACT )
         if self.positions[fut]['size'] > 0 and self.positionGains[fut] == True:
-            bids    = [ bid0 * riskfac * 0.5 ** -i for i in range( 1, int(nbids) + 1 ) ]
+            bids    = [ bid0 * riskfac * 1 ** -i for i in range( 1, int(nbids) + 1 ) ]
         else:
             bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
      
@@ -1639,7 +1639,7 @@ class MarketMaker( object ):
         ask0            = mid_mkt * math.exp(  MKT_IMPACT )
         if self.positions[fut]['size'] < 0 and self.positionGains[fut] == True:
          
-            asks    = [ ask0 * riskfac * 0.5 ** i for i in range( 1, int(nasks) + 1 ) ]
+            asks    = [ ask0 * riskfac * 1 ** i for i in range( 1, int(nasks) + 1 ) ]
         else:   
             asks    = [ ask0 * riskfac  ** i for i in range( 1, int(nasks) + 1 ) ]
            
