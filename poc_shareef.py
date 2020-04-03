@@ -79,8 +79,8 @@ skews = []
 
 KEY2 = "5HkSPCwo"
 SECRET2 = "z5fHc3FFB_SrVmEK6z0Unc-CjtHVU9_5pNMCdbXw_K0"
-KEY     = "7x5cttEC"# "VC4d7Pj1"
-SECRET  = "h_xxD-huOZOyNWouHh_yQnRyMkKyQyUv-EX96ReUHmM"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
+KEY     =  "VC4d7Pj1"
+SECRET  = "IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
 
 ULTRACONSERVATIVE = True
 BP                  = 1e-4      # one basis point
@@ -1212,7 +1212,7 @@ class MarketMaker( object ):
                     if qtyold > qty:
                         qty = qtyold
                     if self.positionGains[fut] == True and self.positions[fut]['size'] > 0 and positionSize < 0:
-                        qty = self.maxqty * 1.5
+                        qty = qty * 1.5
                     
 
                     if qty < 1:
@@ -1422,7 +1422,7 @@ class MarketMaker( object ):
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
                     if self.positionGains[fut] == True  and self.positions[fut]['size'] < 0 and positionSize > 0:
-                        qty = self.maxqty * 1.5
+                        qty = qty * 1.5
                     
                     if qty < 1:
                         qty = 1
