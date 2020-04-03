@@ -2082,9 +2082,6 @@ class MarketMaker( object ):
             self.perps = 0
             self.perps2 = 0
             
-            self.tradeids = []
-            self.amounts = 0
-            self.fees = 0
             self.place_orders()
             self.avg_pnl_sl_tp()
             # Display status to terminal
