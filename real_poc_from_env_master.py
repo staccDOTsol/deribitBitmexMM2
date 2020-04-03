@@ -101,7 +101,7 @@ PCT_LIM_LONG        = 30      # % position limit long
 PCT_LIM_SHORT       = 30 # % position limit short
 
 MIN_LOOP_TIME       =  0.25      # Minimum time between loops
-RISK_CHARGE_VOL     =   140*16  # vol risk charge in bps per 100 vol
+RISK_CHARGE_VOL     =   70*16  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
 WAVELEN_MTIME_CHK   = 15        # time in seconds between check for file change
@@ -1209,7 +1209,7 @@ class MarketMaker( object ):
                     if positionSize > 0:
                         print((qty * MAX_LAYERS) / 2 + positionSize)
                         print('maxqty: ' + str(self.maxqty))             
-                        if (((qty * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 5)):
+                        if (((qty * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 5 * 3)):
                             if self.positions[fut]['size'] > 0:
                                 print('max skew on buy')
                                     
@@ -1219,7 +1219,7 @@ class MarketMaker( object ):
                                 except:
                                     abc123 = 1
                                 gogo = False
-                        if (((qty * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 5 * 2)):
+                        if (((qty * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 5  * 3 * 2)):
                             if self.positions[fut]['size'] < 0:
                                 print('max skew on buy')
                                 try:
@@ -1248,18 +1248,18 @@ class MarketMaker( object ):
 
                                 if 'PERPETUAL' not in fut or self.perpbuy < 2:
                                     bought = False
-                                    if self.arbmult[fut]['arb'] > 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
+                                    if self.arbmult[fut]['arb'] > 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5 * 3:
                                         self.client.buy( fut, qty, prc, 'true' )
                                         if 'PERPETUAL' in fut:
                                             bought = True
 
 
-                                    if self.arbmult[fut]['arb'] < 1 and  positionSize - qty /  2<= self.maxqty * 2.5 * 5:
+                                    if self.arbmult[fut]['arb'] < 1 and  positionSize - qty /  2<= self.maxqty * 2.5 * 5 * 3:
                                         self.client.buy(  fut, qty, prc, 'true' )
                                         if 'PERPETUAL' in fut:
                                             bought = True
 
-                                    if self.arbmult[fut]['arb'] == 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
+                                    if self.arbmult[fut]['arb'] == 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5 * 3:
                                         self.client.buy( fut, qty, prc, 'true' )
                                         if 'PERPETUAL' in fut:
                                             bought = True
@@ -1290,18 +1290,18 @@ class MarketMaker( object ):
                             
                             if 'PERPETUAL' not in fut or self.perpbuy < 2:
                                 bought = False
-                                if self.arbmult[fut]['arb'] > 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
+                                if self.arbmult[fut]['arb'] > 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5 * 3:
                                     self.client.buy( fut, qty, prc, 'true' )
                                     if 'PERPETUAL' in fut:
                                         bought = True
 
 
-                                if self.arbmult[fut]['arb'] < 1 and  positionSize - qty /  2<=  self.maxqty * 2.5 * 5:
+                                if self.arbmult[fut]['arb'] < 1 and  positionSize - qty /  2<=  self.maxqty * 2.5 * 5 * 3:
                                     self.client.buy(  fut, qty, prc, 'true' )
                                     if 'PERPETUAL' in fut:
                                         bought = True
 
-                                if self.arbmult[fut]['arb'] == 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5:
+                                if self.arbmult[fut]['arb'] == 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5 * 3:
                                     self.client.buy( fut, qty, prc, 'true' )
                                     if 'PERPETUAL' in fut:
                                         bought = True
@@ -1428,7 +1428,7 @@ class MarketMaker( object ):
 
 
                         print((qty * MAX_LAYERS) / 2 + positionSize * -1)
-                        if (((qty * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty * 2.5 * 5)) and self.positions[fut]['size'] < 0:
+                        if (((qty * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty * 2.5 * 3 * 5 * 3)) and self.positions[fut]['size'] < 0:
                             print('max skew on sell')
                             try:
                                 oid = ask_ords[ i ][ 'orderId' ]
@@ -1437,7 +1437,7 @@ class MarketMaker( object ):
                                 abc123 = 1
                                 
                             gogo = False
-                        if (((qty * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty * 2 * 1.25 * 5)) and self.positions[fut]['size'] > 0:
+                        if (((qty * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty * 2  * 3* 1.25 * 3 * 5)) and self.positions[fut]['size'] > 0:
                             print('max skew on sell')
                             try:
                                 oid = ask_ords[ i ][ 'orderId' ]
@@ -1462,16 +1462,16 @@ class MarketMaker( object ):
                                 if place_asks and i < nasks:
                                     if 'PERPETUAL' not in fut or self.perpsell < 2:
                                         sold = False
-                                        if self.arbmult[fut]['arb'] == 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1:
+                                        if self.arbmult[fut]['arb'] == 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * 3 * -1:
                                             self.client.sell(  fut, qty, prc, 'true' )
                                             if 'PERPETUAL' in fut:
                                                 sold = True
-                                        if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1:
+                                        if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * 3 * -1:
                                             self.client.sell( fut, qty, prc, 'true' )
                                             if 'PERPETUAL' in fut:
                                                 sold = True
                                             
-                                        if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1:
+                                        if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * 3 * -1:
                                             self.client.sell(  fut, qty, prc, 'true' )
                                             if 'PERPETUAL' in fut:
                                                 sold = True
@@ -1497,16 +1497,16 @@ class MarketMaker( object ):
                         try:
                             if 'PERPETUAL' not in fut or self.perpsell < 2:
                                 sold = False
-                                if self.arbmult[fut]['arb'] == 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1:
+                                if self.arbmult[fut]['arb'] == 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * 3 * -1:
                                     self.client.sell(  fut, qty, prc, 'true' )
                                     if 'PERPETUAL' in fut:
                                         sold = True
-                                if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1:
+                                if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * 3 * -1:
                                     self.client.sell( fut, qty, prc, 'true' )
                                     if 'PERPETUAL' in fut:
                                         sold = True
                                     
-                                if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * -1:
+                                if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * 3 * -1:
                                     self.client.sell(  fut, qty, prc, 'true' )
                                     if 'PERPETUAL' in fut:
                                         sold = True
@@ -2336,8 +2336,8 @@ class MarketMaker( object ):
             print(resp)
             if resp != 500:
                 if '1m' in resp: 
-                    mmbot.predict_1 = float(resp['1m'].replace('"',"")) / 10
-                    mmbot.predict_5 = float(resp['5m'].replace('"',"")) / 10
+                    mmbot.predict_1 = float(resp['1m'].replace('"',""))
+                    mmbot.predict_5 = float(resp['5m'].replace('"',"")) 
 
                     if mmbot.predict_1 < 0:
                         mmbot.predict_1 = old1
