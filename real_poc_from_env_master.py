@@ -1096,7 +1096,7 @@ class MarketMaker( object ):
             for i in range( min( nbids, nasks, MAX_LAYERS )):
                 sleep(0.01)
                 # BIDS
-                 
+                sleep(0.5)
 
                 print('===')
                 print('nbids')
@@ -1315,6 +1315,7 @@ class MarketMaker( object ):
                         except Exception as e:
                             i
                 # OFFERS
+                sleep(0.5)
                 print('place_asks')
                 print(place_asks)
                 print('nasks')
