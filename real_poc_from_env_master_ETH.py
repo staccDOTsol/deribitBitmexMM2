@@ -1174,16 +1174,17 @@ class MarketMaker( object ):
                     qtyold = qty
                     if qtyold > qty:
                         qty = qtyold
-                    if self.positionGains[fut] == True :
+                    positionSize = 0
+                    for p in self.positions:
+                        positionSize = positionSize + self.positions[p]['size']  
+                    if self.positionGains[fut] == True and self.positions[fut]['size'] < 0 and positionSize > 0:
                         qty = qty * 1.25
                     else:
                         qty = qty * 0.25
 
                     if qty < 1:
                         qty = 1
-                    positionSize = 0
-                    for p in self.positions:
-                        positionSize = positionSize + self.positions[p]['size']                        
+                                          
                     if positionSize < 0:
                         #len(self.futures)
                         
@@ -1385,15 +1386,16 @@ class MarketMaker( object ):
                     qtyold = qty
                     if qtyold > qty:
                         qty = qtyold
-                    if self.positionGains[fut] == True:
+                    positionSize = 0
+                    for p in self.positions:
+                        positionSize = positionSize + self.positions[p]['size']
+                    if self.positionGains[fut] == True  and self.positions[fut]['size'] > 0 and positionSize < 0:
                         qty = qty * 1.25
                     else:
                         qty = qty * 0.25
                     if qty < 1:
                         qty = 1
-                    positionSize = 0
-                    for p in self.positions:
-                        positionSize = positionSize + self.positions[p]['size']
+                    
                     if positionSize > 0:
                         #len(self.futures)
                         
@@ -2058,7 +2060,7 @@ class MarketMaker( object ):
                 print(e)
             self.perps = 0
             self.perps2 = 0
-            
+
             self.place_orders()
             self.avg_pnl_sl_tp()
             # Display status to terminal

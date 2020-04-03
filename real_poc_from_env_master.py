@@ -1194,16 +1194,17 @@ class MarketMaker( object ):
                     qtyold = qty
                     if qtyold > qty:
                         qty = qtyold
-                    if self.positionGains[fut] == True  and self.positions[fut]['size'] < 0:
+                    positionSize = 0
+                    for p in self.positions:
+                        positionSize = positionSize + self.positions[p]['size']  
+                    if self.positionGains[fut] == True and self.positions[fut]['size'] < 0 and positionSize > 0:
                         qty = qty * 1.25
                     else:
                         qty = qty * 0.25
 
                     if qty < 1:
                         qty = 1
-                    positionSize = 0
-                    for p in self.positions:
-                        positionSize = positionSize + self.positions[p]['size']                        
+                                          
                     if positionSize < 0:
                         #len(self.futures)
                         
@@ -1412,15 +1413,16 @@ class MarketMaker( object ):
                     qtyold = qty
                     if qtyold > qty:
                         qty = qtyold
-                    if self.positionGains[fut] == True  and self.positions[fut]['size'] > 0:
+                    positionSize = 0
+                    for p in self.positions:
+                        positionSize = positionSize + self.positions[p]['size']
+                    if self.positionGains[fut] == True  and self.positions[fut]['size'] > 0 and positionSize < 0:
                         qty = qty * 1.25
                     else:
                         qty = qty * 0.25
                     if qty < 1:
                         qty = 1
-                    positionSize = 0
-                    for p in self.positions:
-                        positionSize = positionSize + self.positions[p]['size']
+                    
                     if positionSize > 0:
                         #len(self.futures)
                         
