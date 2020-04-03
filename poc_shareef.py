@@ -927,12 +927,13 @@ class MarketMaker( object ):
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
                     bid0            = mid_mkt * math.exp( -MKT_IMPACT )
-                    if self.positions[fut]['size'] > 0 and self.positionGains[fut] == True:
-                        bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
-                    else:
-                        bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
                  
+
                     bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                    
+
+                   
                     
                 if place_asks:
                     
@@ -940,12 +941,10 @@ class MarketMaker( object ):
                     len_ask_ords    = min( len( ask_ords ), nasks )
                     
                     ask0            = mid_mkt * math.exp(  MKT_IMPACT )
-                    if self.positions[fut]['size'] < 0 and self.positionGains[fut] == True:
                      
-                        asks    = [ ask0 * riskfac ** i for i in range( 1, int(nasks) + 1 ) ]
-                    else:   
-                        asks    = [ ask0 * riskfac  ** i for i in range( 1, int(nasks) + 1 ) ]
-                       
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, int(nasks) + 1 ) ]
+
+
                     asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
                 
             else:
@@ -970,28 +969,25 @@ class MarketMaker( object ):
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
                     bid0            = mid_mkt * math.exp( -MKT_IMPACT )
-                    if self.positions[fut]['size'] > 0 and self.positionGains[fut] == True:
-                        bids1    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
-                    else:
-                        bids1    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
                  
 
-                    bids1[ 0 ]   = ticksize_floor( bids1[ 0 ], tsz )
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                    
 
+                   
                     
                 if place_asks:
                     
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
                     len_ask_ords    = min( len( ask_ords ), nasks )
+                    
                     ask0            = mid_mkt * math.exp(  MKT_IMPACT )
-                    if self.positions[fut]['size'] < 0 and self.positionGains[fut] == True:
                      
-                        asks1    = [ ask0 * riskfac ** i for i in range( 1, int(nasks) + 1 ) ]
-                    else:   
-                        asks1    = [ ask0 * riskfac  ** i for i in range( 1, int(nasks) + 1 ) ]
-                       
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, int(nasks) + 1 ) ]
 
-                    asks1[ 0 ]   = ticksize_ceil( asks1[ 0 ], tsz  )
+
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
                 
                 
                 bbo     = self.getbidsandasks( fut ,avg )
@@ -1007,28 +1003,28 @@ class MarketMaker( object ):
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
                     bid0            = mid_mkt * math.exp( -MKT_IMPACT )
-                    if self.positions[fut]['size'] > 0 and self.positionGains[fut] == True:
-                        bids1    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
-                    else:
-                        bids1    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
                  
 
-                    bids1[ 0 ]   = ticksize_floor( bids1[ 0 ], tsz )
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                    bidso = bids
+                    bids1 = bids
 
-                    bidso = bids1
+                   
+                    
                 if place_asks:
                     
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
                     len_ask_ords    = min( len( ask_ords ), nasks )
+                    
                     ask0            = mid_mkt * math.exp(  MKT_IMPACT )
-                    if self.positions[fut]['size'] < 0 and self.positionGains[fut] == True:
                      
-                        asks1    = [ ask0 * riskfac ** i for i in range( 1, int(nasks) + 1 ) ]
-                    else:   
-                        asks1    = [ ask0 * riskfac  ** i for i in range( 1, int(nasks) + 1 ) ]
-                       
-                    asks1[ 0 ]   = ticksize_ceil( asks1[ 0 ], tsz  )
-                    askso = asks1
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, int(nasks) + 1 ) ]
+
+
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                    askso = asks
+                    asks1 = asks
                 asksn = []
                 bidsn = []
                 
@@ -1627,22 +1623,16 @@ class MarketMaker( object ):
         
         
         bid0            = mid_mkt * math.exp( -MKT_IMPACT )
-        if self.positions[fut]['size'] > 0 and self.positionGains[fut] == True:
-            bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
-        else:
-            bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
+        bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
      
 
         bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
         
 
         ask0            = mid_mkt * math.exp(  MKT_IMPACT )
-        if self.positions[fut]['size'] < 0 and self.positionGains[fut] == True:
          
-            asks    = [ ask0 * riskfac ** i for i in range( 1, int(nasks) + 1 ) ]
-        else:   
-            asks    = [ ask0 * riskfac  ** i for i in range( 1, int(nasks) + 1 ) ]
-           
+        asks    = [ ask0 * riskfac ** i for i in range( 1, int(nasks) + 1 ) ]
+
 
         asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
         return {'asks': asks, 'bids': bids}
