@@ -1091,6 +1091,9 @@ class MarketMaker( object ):
             
             len_bid_ords = min( len( bid_ords ), nbids ) 
             len_ask_ords    = min( len( ask_ords ), nasks )
+            
+            place_bids= nbids > 0
+            place_asks = nasks > 0
             for i in range( min( nbids, nasks, MAX_LAYERS )):
                 sleep(0.01)
                 # BIDS
@@ -1842,7 +1845,7 @@ class MarketMaker( object ):
             self.lastposdiff = self.posdiff #300
             self.posdiff = positionPos #400
             ts = 0
-            
+
             self.tradeids = []
             self.amounts = 0
             self.fees = 0

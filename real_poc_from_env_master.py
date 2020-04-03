@@ -903,7 +903,7 @@ class MarketMaker( object ):
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
                     bid0            = mid_mkt * math.exp( -MKT_IMPACT )
-                    if self.positions[fut]['size'] > 0 and self.positionGains[fut] == True:
+                    if self.positions[fut]['size'] < 0 and self.positionGains[fut] == True:
                         bids    = [ bid0 * riskfac * 0.5 ** -i for i in range( 1, int(nbids) + 1 ) ]
                     else:
                         bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
@@ -914,7 +914,7 @@ class MarketMaker( object ):
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
                     len_ask_ords    = min( len( ask_ords ), nasks )
                     ask0            = mid_mkt * math.exp(  MKT_IMPACT )
-                    if self.positions[fut]['size'] < 0 and self.positionGains[fut] == True:
+                    if self.positions[fut]['size'] > 0 and self.positionGains[fut] == True:
                      
                         asks    = [ ask0 * riskfac * 0.5 ** i for i in range( 1, int(nasks) + 1 ) ]
                     else:   
@@ -945,7 +945,7 @@ class MarketMaker( object ):
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
                     bid0            = mid_mkt * math.exp( -MKT_IMPACT )
-                    if self.positions[fut]['size'] > 0 and self.positionGains[fut] == True:
+                    if self.positions[fut]['size'] < 0 and self.positionGains[fut] == True:
                         bids1    = [ bid0 * riskfac * 0.5 ** -i for i in range( 1, int(nbids) + 1 ) ]
                     else:
                         bids1    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
@@ -957,7 +957,7 @@ class MarketMaker( object ):
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
                     len_ask_ords    = min( len( ask_ords ), nasks )
                     ask0            = mid_mkt * math.exp(  MKT_IMPACT )
-                    if self.positions[fut]['size'] < 0 and self.positionGains[fut] == True:
+                    if self.positions[fut]['size'] > 0 and self.positionGains[fut] == True:
                      
                         asks1    = [ ask0 * riskfac * 0.5 ** i for i in range( 1, int(nasks) + 1 ) ]
                     else:   
@@ -979,7 +979,7 @@ class MarketMaker( object ):
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
                     bid0            = mid_mkt * math.exp( -MKT_IMPACT )
-                    if self.positions[fut]['size'] > 0 and self.positionGains[fut] == True:
+                    if self.positions[fut]['size'] < 0 and self.positionGains[fut] == True:
                         bids1    = [ bid0 * riskfac * 0.5 ** -i for i in range( 1, int(nbids) + 1 ) ]
                     else:
                         bids1    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
@@ -991,7 +991,7 @@ class MarketMaker( object ):
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
                     len_ask_ords    = min( len( ask_ords ), nasks )
                     ask0            = mid_mkt * math.exp(  MKT_IMPACT )
-                    if self.positions[fut]['size'] < 0 and self.positionGains[fut] == True:
+                    if self.positions[fut]['size'] > 0 and self.positionGains[fut] == True:
          
                         asks1    = [ ask0 * riskfac * 0.5 ** i for i in range( 1, int(nasks) + 1 ) ]
                     else:   
@@ -1111,6 +1111,9 @@ class MarketMaker( object ):
            
             len_bid_ords = min( len( bid_ords ), nbids ) 
             len_ask_ords    = min( len( ask_ords ), nasks )
+
+            place_bids= nbids > 0
+            place_asks = nasks > 0
             for i in range( min( nbids, nasks, MAX_LAYERS )):
                 sleep(0.01)
                 # BIDS
@@ -1595,7 +1598,7 @@ class MarketMaker( object ):
         
         
         bid0            = mid_mkt * math.exp( -MKT_IMPACT )
-        if self.positions[fut]['size'] > 0 and self.positionGains[fut] == True:
+        if self.positions[fut]['size'] < 0 and self.positionGains[fut] == True:
             bids    = [ bid0 * riskfac * 0.5 ** -i for i in range( 1, int(nbids) + 1 ) ]
         else:
             bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
@@ -1603,7 +1606,7 @@ class MarketMaker( object ):
         
 
         ask0            = mid_mkt * math.exp(  MKT_IMPACT )
-        if self.positions[fut]['size'] < 0 and self.positionGains[fut] == True:
+        if self.positions[fut]['size'] > 0 and self.positionGains[fut] == True:
          
             asks    = [ ask0 * riskfac * 0.5 ** i for i in range( 1, int(nasks) + 1 ) ]
         else:   
