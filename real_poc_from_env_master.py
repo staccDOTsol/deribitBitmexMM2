@@ -1194,12 +1194,12 @@ class MarketMaker( object ):
                     print(self.positionGains[fut])
 
                     if 'PERPETUAL' in fut and self.thearb > 1 and positionSize < 0:
-                        qty = qty * 1.2#len(self.futures) 
+                        qty = qty * 1.5#len(self.futures) 
 
                     elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize < 0:
-                        qty = qty * 1.2#len(self.futures)
+                        qty = qty * 1.5#len(self.futures)
                     elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize > 0:
-                        qty = qty * 1.2#len(self.futures)
+                        qty = qty * 1.5#len(self.futures)
                     gogo = True
                     p1 = self.predict_1
                     p5 = self.predict_5
@@ -1257,7 +1257,7 @@ class MarketMaker( object ):
                         if ps > (self.maxqty * 2.5 * 5 * 1 * 1) / len(self.futures) / 2:
                             qty = ps
                     if self.positions[fut]['size'] < 0:
-                        qty = qty * 1.2 
+                        qty = qty * 1.5 
                     qty = int(qty)
                     if positionSize > 0:
                         print((qty * MAX_LAYERS) / 2 + positionSize)
@@ -1415,11 +1415,11 @@ class MarketMaker( object ):
                         positionSize = positionSize + self.positions[p]['size']
 
                     if 'PERPETUAL' in fut and self.thearb < 1 and positionSize < 0: 
-                        qty = qty * 1.2#len(self.futures)
+                        qty = qty * 1.5#len(self.futures)
                     elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize < 0:
-                        qty = qty * 1.2#len(self.futures)
+                        qty = qty * 1.5#len(self.futures)
                     elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize > 0:
-                        qty = qty * 1.2#len(self.futures)
+                        qty = qty * 1.5#len(self.futures)
                     gogo = True
                     p1 = self.predict_1
                     p5 = self.predict_5
@@ -1472,7 +1472,7 @@ class MarketMaker( object ):
                             qty = ps
 
                     if self.positions[fut]['size'] > 0:
-                        qty = qty * 1.2 
+                        qty = qty * 1.5 
                     qty = int(qty)
                     #print('pos size: ' + str(positionSize))
 

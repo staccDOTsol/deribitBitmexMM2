@@ -1235,7 +1235,7 @@ class MarketMaker( object ):
 
 
                     if self.positionGains[fut] == True and self.positions[fut]['size'] > 0 and positionSize < 0:
-                        qty = qty * 1.25
+                        qty = qty * 1.55
                     
 
                     print(qty)
@@ -1261,7 +1261,7 @@ class MarketMaker( object ):
                         if ps > (self.maxqty * 2.5 * 5 * 1 * 1) / len(self.futures) / 2:
                             qty = ps
                     if self.positions[fut]['size'] < 0:
-                        qty = qty * 1.2        
+                        qty = qty * 1.5        
                     qty = int(qty)
                     if positionSize > 0:
                         print((qty * MAX_LAYERS) / 2 + positionSize)
@@ -1442,7 +1442,7 @@ class MarketMaker( object ):
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
                     if self.positionGains[fut] == True  and self.positions[fut]['size'] < 0 and positionSize > 0:
-                        qty = qty * 1.25
+                        qty = qty * 1.55
                     
                     if qty < 1:
                         qty = 1
@@ -1467,7 +1467,7 @@ class MarketMaker( object ):
                             qty = ps
 
                     if self.positions[fut]['size'] > 0:
-                        qty = qty * 1.2
+                        qty = qty * 1.5
                     qty = int(qty)
                     #print('pos size: ' + str(positionSize))
 
