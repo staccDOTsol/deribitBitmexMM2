@@ -129,7 +129,7 @@ avgavgpnls = []
 class MarketMaker( object ):
     
     def __init__( self, monitor = True, output = True ):
-        self.PCT_QTY_BASE        = (120/2.5/4/1.5/2)*15*10# pct order qty in bps as pct of acct on each order
+        self.PCT_QTY_BASE        = (30/2.5/4/1.5/2)*15*10# pct order qty in bps as pct of acct on each order
         self.PCT_QTY_BASE        *= BP
         self.predict_1 = 0.5
         self.predict_5 = 0.5
@@ -1177,8 +1177,8 @@ class MarketMaker( object ):
                     positionSize = 0
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']  
-                    if self.positionGains[fut] == True and self.positions[fut]['size'] < 0 and positionSize < 0:
-                        qty = qty * 1.25
+                    if self.positionGains[fut] == True and self.positions[fut]['size'] > 0 and positionSize < 0:
+                        qty = self.maxqty * 1.5
                     
 
                     if qty < 1:
@@ -1199,13 +1199,9 @@ class MarketMaker( object ):
                         ps = ps / len(self.futures) / 2
                         if ps < 1:
                             ps = 1
-                        qty = ps
+                        if ps > self.maxqty * 2.5 * 5 * 1 * 2:
+                            qty = ps
 
-                        if qty > self.maxqty  * 2.5 * 5:
-                            if self.maxqty  * 2.5 * 5 < ps:
-                                qty = self.maxqty  * 2.5 * 5
-                            else:
-                                qty = ps
                     qty = int(qty)
                     if positionSize > 0:
                         print((qty * MAX_LAYERS) / 2 + positionSize)
@@ -1388,8 +1384,8 @@ class MarketMaker( object ):
                     positionSize = 0
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
-                    if self.positionGains[fut] == True  and self.positions[fut]['size'] > 0 and positionSize > 0:
-                        qty = qty * 1.25
+                    if self.positionGains[fut] == True  and self.positions[fut]['size'] < 0 and positionSize > 0:
+                        qty = self.maxqty * 1.5
                     
                     if qty < 1:
                         qty = 1
@@ -1408,12 +1404,9 @@ class MarketMaker( object ):
                         ps = ps / len(self.futures) / 2 / 2
                         if ps < 1:
                             ps = 1
-                        qty = ps
-                        if qty > self.maxqty  * 2.5 * 5:
-                            if self.maxqty  * 2.5 * 5 < ps:
-                                qty = self.maxqty  * 2.5 * 5
-                            else:
-                                qty = ps
+                        if ps > self.maxqty * 2.5 * 5 * 1 * 2:
+                            qty = ps
+
 
                     qty = int(qty)
                     #print('pos size: ' + str(positionSize))
@@ -1819,12 +1812,11 @@ class MarketMaker( object ):
                     print(p['instrument'])
                     print(mid)
                     print(p['averagePrice'])
-                    if self.positions[p['instrument']]['size'] < 0:
-                        self.positionGains[p['instrument']] = mid < p['averagePrice']
+                    if p['floatingPl'] > 0:
+                        self.positionGains[p['instrument']] = True
                     else:
-                        self.positionGains[p['instrument']] = mid > p['averagePrice']
+                        self.positionGains[p['instrument']] = False
                     positionPrices[p['instrument']] = mid < p['averagePrice']
-                    positionPrices['ETH-PERPETUAL'] = mid > p['averagePrice']
             for p in self.positions:
                 positionSize = positionSize + self.positions[p]['size']
                 if self.positions[p]['size'] < 0:
