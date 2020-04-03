@@ -1881,9 +1881,6 @@ class MarketMaker( object ):
             self.posdiff = positionPos #400
             ts = 0
             ms = 0
-            self.tradeids = []
-            self.amounts = 0
-            self.fees = 0
             for fut in self.futures.keys():
                 trades = self.client.tradehistory(1000, fut)
                 for t in trades:
@@ -2097,6 +2094,9 @@ class MarketMaker( object ):
                 print(e)
             self.perps = 0
             self.perps2 = 0
+            self.tradeids = []
+            self.amounts = 0
+            self.fees = 0
             self.place_orders()
             self.avg_pnl_sl_tp()
             # Display status to terminal

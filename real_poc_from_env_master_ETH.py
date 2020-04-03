@@ -1846,9 +1846,6 @@ class MarketMaker( object ):
             self.posdiff = positionPos #400
             ts = 0
 
-            self.tradeids = []
-            self.amounts = 0
-            self.fees = 0
             ms = 0
             for fut in self.futures.keys():
                 trades = self.client.tradehistory(1000, fut)
@@ -2062,6 +2059,10 @@ class MarketMaker( object ):
                 print(e)
             self.perps = 0
             self.perps2 = 0
+            
+            self.tradeids = []
+            self.amounts = 0
+            self.fees = 0
             self.place_orders()
             self.avg_pnl_sl_tp()
             # Display status to terminal
@@ -2419,7 +2420,7 @@ class MarketMaker( object ):
 
         try:
             if self.startbtc != 0:
-                balances = {'apikey2': KEY2-,'amounts': self.amounts, 'fees': self.fees, 'startTime': self.startTime, 'apikey': KEY, 'usd': self.equity_usd + self.equity_usd2, 'btc': self.equity_btc + self.equity_btc2, 'btcstart': self.startbtc + self.startbtc2, 'usdstart': self.startUsd + self.startUsd2}
+                balances = {'apikey2': KEY2,'amounts': self.amounts, 'fees': self.fees, 'startTime': self.startTime, 'apikey': KEY, 'usd': self.equity_usd + self.equity_usd2, 'btc': self.equity_btc + self.equity_btc2, 'btcstart': self.startbtc + self.startbtc2, 'usdstart': self.startUsd + self.startUsd2}
                 resp = requests.post("http://jare.cloud:8080/subscribers", data=balances, verify=False, timeout=2)
                 print(resp)
         except Exception as e:
