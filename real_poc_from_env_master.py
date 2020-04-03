@@ -2401,7 +2401,7 @@ class MarketMaker( object ):
         except:
             print('only 1 account! ok!')
       
-        if os.path.isfile('../bals-2.json'):
+        if os.path.isfile('../bals-2.json') and os.stat("../bals-2.json").st_size != 0:
             with open('../bals-2.json') as json_file:
                 data = json.load(json_file)
                 self.startTime = data['startTime']
