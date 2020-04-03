@@ -1235,7 +1235,7 @@ class MarketMaker( object ):
                         ps = ps * 2
                         if ps < 1:
                             ps = 1
-                        if ps > self.maxqty * 2.5 * 5 * 1 *1:
+                        if ps > (self.maxqty * 2.5 * 5 * 1 * 1) / len(self.futures) / 2:
                             qty = ps
 
                     qty = int(qty)
@@ -1439,7 +1439,7 @@ class MarketMaker( object ):
                         ps = ps * 2
                         if ps < 1:
                             ps = 1
-                        if ps  > self.maxqty * 2.5 * 5 * 1 * 1:
+                        if ps  > (self.maxqty * 2.5 * 5 * 1 * 1) / len(self.futures) / 2:
                             qty = ps
 
 
