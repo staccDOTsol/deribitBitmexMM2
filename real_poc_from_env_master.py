@@ -734,6 +734,30 @@ class MarketMaker( object ):
             print(pos_lim_long)
             nbids   = min( math.trunc( pos_lim_long  / qtybtc ), MAX_LAYERS )
             nasks   = min( math.trunc( pos_lim_short / qtybtc ), MAX_LAYERS )
+            if nbids == 0:
+                self.client.cancelall()
+                try:
+                    sleep(0.01)
+
+                    bbo     = self.get_bbo( fut )
+                    bid_mkt = bbo[ 'bid' ]
+                    ask_mkt = bbo[ 'ask' ]
+                    mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
+                    self.client.sell(  fut, int(self.positions[fut]['size'] / 20), mid * 0.98, 'false' )
+                except Exception as e:
+                    print(e)
+            if nasks == 0:
+                self.client.cancelall()
+                try:
+                    sleep(0.01)
+
+                    bbo     = self.get_bbo( fut )
+                    bid_mkt = bbo[ 'bid' ]
+                    ask_mkt = bbo[ 'ask' ]
+                    mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
+                    self.client.buy(  fut, int(self.positions[fut]['size'] * -1 / 20), mid * 1.02, 'false' )
+                except Exception as e:
+                    print(e)
             positionSize = 0
             for p in self.positions:
                 positionSize = positionSize + int(self.positions[p]['size'])
