@@ -2401,8 +2401,8 @@ class MarketMaker( object ):
         except:
             print('only 1 account! ok!')
       
-        if os.path.isfile('../bals.json'):
-            with open('../bals.json') as json_file:
+        if os.path.isfile('../bals-2.json'):
+            with open('../bals-2.json') as json_file:
                 data = json.load(json_file)
                 self.startTime = data['startTime']
                 self.startbtc = data['startbtc']
@@ -2425,7 +2425,7 @@ class MarketMaker( object ):
 
             data['startbtc2'] = self.startbtc2
             data['startUsd2'] = self.startUsd2
-            with open('../bals.json', 'w') as outfile:
+            with open('../bals-2.json', 'w') as outfile:
                 json.dump(data, outfile)
 
         
