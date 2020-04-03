@@ -985,7 +985,7 @@ class MarketMaker( object ):
                         bids1    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
                     bids1[ 0 ]   = ticksize_floor( bids1[ 0 ], tsz )
 
-                    
+                    bidso = bids1
                 if place_asks:
                     
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
@@ -998,11 +998,11 @@ class MarketMaker( object ):
                         asks1    = [ ask0 * riskfac  ** i for i in range( 1, int(nasks) + 1 ) ]
                        
                     asks1[ 0 ]   = ticksize_ceil( asks1[ 0 ], tsz  )
-                
+                    askso = asks1
                 asksn = []
                 bidsn = []
-                askso = asks1
-                bidso = bids1
+                
+                
                 account         = self.client.account()
 
                 spot            = self.get_spot()
@@ -1064,18 +1064,24 @@ class MarketMaker( object ):
                 if positionSize2 < 0:
                     positionSize2 = positionSize2 * -1
                 if place_asks2 == False and positionSize2 > self.maxqty  * 2.5 * 2.5:
-                    if len(askso) >= 1:
-                        asksn.append(askso[0])
-                    if len(askso) >= 2:
-                        asksn.append(askso[1])
+                    try:
+                        if len(askso) >= 1:
+                            asksn.append(askso[0])
+                        if len(askso) >= 2:
+                            asksn.append(askso[1])
+                    except:
+                        exception = 1
                 asks = asksn
                 if place_bids2 == True:
-                    if len(bids1) >= 1:
-                        bidsn.append(bids1[0])
-                        nbids = nbids + 1
-                    if len(bids1) >= 2:
-                        bidsn.append(bids1[1])
-                        nbids = nbids + 1
+                    try: 
+                        if len(bids1) >= 1:
+                            bidsn.append(bids1[0])
+                            nbids = nbids + 1
+                        if len(bids1) >= 2:
+                            bidsn.append(bids1[1])
+                            nbids = nbids + 1
+                    except:
+                        exception = 1
                     len_bid_ords = min( len( bid_ords ), nbids )
                 if place_bids2 == False and positionSize2 > self.maxqty  * 2.5 * 2.5:
                     if len(bidso) >= 1:
@@ -1201,7 +1207,7 @@ class MarketMaker( object ):
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']  
                     if self.positionGains[fut] == True and self.positions[fut]['size'] > 0 and positionSize < 0:
-                        qty = qty * 1.5
+                        qty = self.maxqty / 1.25
                     
 
                     if qty < 1:
@@ -1415,7 +1421,7 @@ class MarketMaker( object ):
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
                     if self.positionGains[fut] == True  and self.positions[fut]['size'] < 0 and positionSize > 0:
-                        qty = qty * 1.5
+                        qty = self.maxqty / 1.25
                     
                     if qty < 1:
                         qty = 1

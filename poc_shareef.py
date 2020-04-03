@@ -33,8 +33,8 @@ import argparse, logging, math, os, pathlib, sys, time, traceback
 try:
     from deribit_api    import RestClient
 except ImportError:
-    #print("Please install the deribit_api pacakge", file=sys.stderr)
-    #print("    pip3 install deribit_api", file=sys.stderr)
+    ##print("Please install the deribit_api pacakge", file=sys.stderr)
+    ##print("    pip3 install deribit_api", file=sys.stderr)
     exit(1)
 
 # Add command line switches
@@ -70,8 +70,8 @@ from datetime import datetime
 #{(datetime.strptime('2020-02-28', '%Y-%m-%d')): 0,(datetime.strptime(datetime.today().strftime('%Y-%m-%d'), '%Y-%m-%d')): -1}
 #s = pd.Series(data)
 
-##print(s)
-##print(qs.stats.max_drawdown(s))
+###print(s)
+###print(qs.stats.max_drawdown(s))
 
 args    = parser.parse_args()
 URL     = 'https://www.deribit.com'#ctrl+h!!!!!
@@ -79,8 +79,8 @@ skews = []
 
 KEY2 = "5HkSPCwo"
 SECRET2 = "z5fHc3FFB_SrVmEK6z0Unc-CjtHVU9_5pNMCdbXw_K0"
-KEY     =  "VC4d7Pj1"
-SECRET  = "IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
+KEY     = "7x5cttEC"#"VC4d7Pj1"
+SECRET  = "h_xxD-huOZOyNWouHh_yQnRyMkKyQyUv-EX96ReUHmM"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
 
 ULTRACONSERVATIVE = True
 BP                  = 1e-4      # one basis point
@@ -241,7 +241,7 @@ class MarketMaker( object ):
     def get_bbo( self, contract ): # Get best b/o excluding own orders
         j = self.ohlcv[contract].json()
         fut2 = contract
-        #print(contract)
+        ##print(contract)
         best_bids = []
         best_asks = []
         o = []
@@ -275,12 +275,12 @@ class MarketMaker( object ):
                 self.dsrsi = TA.STOCHRSI(ddf).iloc[-1] * 100
             except: 
                 self.dsrsi = 50           
-            ##print(self.dsrsi)
+            ###print(self.dsrsi)
         # Get orderbook
         if 2 in self.volatility or 3 in self.price or 4 in self.quantity_switch:
             self.bands[fut2] = TA.BBANDS(ddf).iloc[-1]
             self.bbw[fut2] = (TA.BBWIDTH(ddf).iloc[-1])
-            #print(float(self.bands[fut2]['BB_UPPER'] - self.bands[fut2]['BB_LOWER']))
+            ##print(float(self.bands[fut2]['BB_UPPER'] - self.bands[fut2]['BB_LOWER']))
             if (float(self.bands[fut2]['BB_UPPER'] - self.bands[fut2]['BB_LOWER'])) > 0:
                 deltab = (self.get_spot() - self.bands[fut2]['BB_LOWER']) / (self.bands[fut2]['BB_UPPER'] - self.bands[fut2]['BB_LOWER'])
                 if deltab > 50:
@@ -327,7 +327,7 @@ class MarketMaker( object ):
             best_bids.append(best_bid)
         if 1 in self.price:
             dvwap = TA.VWAP(ddf)
-            ##print(dvwap)
+            ###print(dvwap)
             tsz = self.get_ticksize( contract ) 
             try:   
                 bid = ticksize_floor( dvwap.iloc[-1], tsz )
@@ -336,7 +336,7 @@ class MarketMaker( object ):
                 bid = ticksize_floor( self.get_spot(), tsz )
                 ask = ticksize_ceil( self.get_spot(), tsz )
            
-            #print( { 'bid': bid, 'ask': ask })
+            ##print( { 'bid': bid, 'ask': ask })
             best_asks.append(best_ask)
             best_bids.append(best_bid)
         if 2 in self.quantity_switch:
@@ -361,7 +361,7 @@ class MarketMaker( object ):
                 self.buysellsignal[fut2] = 1
 
         
-            ##print({ 'bid': best_bid, 'ask': best_ask })
+            ###print({ 'bid': best_bid, 'ask': best_ask })
         return { 'bid': self.cal_average(best_bids), 'ask': self.cal_average(best_asks) }
 
 
@@ -407,17 +407,17 @@ class MarketMaker( object ):
 
 
             diff = 100 * ((nowUsd / startUsd) -1)
-            #print('diff')
-            #print(diff)
+            ##print('diff')
+            ##print(diff)
             
             if diff < self.diff2:
                 self.diff2 = diff
             if diff > self.diff3:
                 self.diff3 = diff
-            print('self diff2 : ' +str(self.diff2))
-            print('self diff3 : ' +str(self.diff3))
+            #print('self diff2 : ' +str(self.diff2))
+            #print('self diff3 : ' +str(self.diff3))
             if self.diff3 > self.maxMaxDD and self.diff3 != 0:
-                print('broke max max dd! sleep 24hr')
+                #print('broke max max dd! sleep 24hr')
                 self.client.cancelall()
                 self.sls = self.sls + 1
                 try:
@@ -460,7 +460,7 @@ class MarketMaker( object ):
                 self.startUsd2 = self.equity_usd2
                 self.startUsd = self.equity_usd
             if self.diff2 < self.minMaxDD and self.diff2 != 0:
-                print('broke min max dd! sleep 24hr')
+                #print('broke min max dd! sleep 24hr')
                 self.client.cancelall()
                 self.sls = self.sls + 1
                 try:
@@ -507,8 +507,8 @@ class MarketMaker( object ):
             s = pd.Series(self.seriesData)
 
 
-            #print(s)
-            #print(qs.stats.max_drawdown(s))
+            ##print(s)
+            ##print(qs.stats.max_drawdown(s))
         if not self.output:
             return None
         
@@ -516,12 +516,12 @@ class MarketMaker( object ):
         
         now     = datetime.utcnow()
         days    = ( now - self.start_time ).total_seconds() / SECONDS_IN_DAY
-        print( '********************************************************************' )
-        print( 'Start Time:        %s' % self.start_time.strftime( '%Y-%m-%d %H:%M:%S' ))
-        print( 'Current Time:      %s' % now.strftime( '%Y-%m-%d %H:%M:%S' ))
-        print( 'Days:              %s' % round( days, 1 ))
-        print( 'Hours:             %s' % round( days * 24, 1 ))
-        print( 'Spot Price:        %s' % self.get_spot())
+        #print( '********************************************************************' )
+        #print( 'Start Time:        %s' % self.start_time.strftime( '%Y-%m-%d %H:%M:%S' ))
+        #print( 'Current Time:      %s' % now.strftime( '%Y-%m-%d %H:%M:%S' ))
+        #print( 'Days:              %s' % round( days, 1 ))
+        #print( 'Hours:             %s' % round( days * 24, 1 ))
+        #print( 'Spot Price:        %s' % self.get_spot())
         
         
         pnl_usd = self.equity_usd - self.equity_usd_init
@@ -529,12 +529,12 @@ class MarketMaker( object ):
         if self.firstfirst == True:
             self.startUsd = self.equity_usd
             self.firstfirst = False
-        print( 'Equity ($):        %7.2f'   % self.equity_usd)
-        print( 'P&L ($)            %7.2f'   % pnl_usd)
-        print( 'Equity (BTC):      %7.4f'   % self.equity_btc)
-        print( 'P&L (BTC)          %7.4f'   % pnl_btc)
-        ##print( '%% Delta:           %s%%'% round( self.get_pct_delta() / PCT, 1 ))
-        ##print( 'Total Delta (BTC): %s'   % round( sum( self.deltas.values()), 2 ))        
+        #print( 'Equity ($):        %7.2f'   % self.equity_usd)
+        #print( 'P&L ($)            %7.2f'   % pnl_usd)
+        #print( 'Equity (BTC):      %7.4f'   % self.equity_btc)
+        #print( 'P&L (BTC)          %7.4f'   % pnl_btc)
+        ###print( '%% Delta:           %s%%'% round( self.get_pct_delta() / PCT, 1 ))
+        ###print( 'Total Delta (BTC): %s'   % round( sum( self.deltas.values()), 2 ))        
         #print_dict_of_dicts( {
         #    k: {
         #        'BTC': self.deltas[ k ]
@@ -556,8 +556,8 @@ class MarketMaker( object ):
                 positionPos = positionPos - self.positions[p]['size']
             else:   
                 positionPos = positionPos + self.positions[p]['size']
-        print(' ')
-        print('Position total delta: ' + str(positionSize * 10) + '$')
+        #print(' ')
+        #print('Position total delta: ' + str(positionSize * 10) + '$')
         if positionSize < 0:
             skews.append(-1)
         else:
@@ -567,8 +567,8 @@ class MarketMaker( object ):
         for s in skews:
             theskew = theskew + s
             count = count + 1
-        print('Skews: ' + str(theskew / count))
-        print('Position exposure: ' + str(positionPos * 10) + '$')
+        #print('Skews: ' + str(theskew / count))
+        #print('Position exposure: ' + str(positionPos * 10) + '$')
         total = 0
         maximum = -99999999999999999999
         minimum = 999999999999999999999
@@ -582,8 +582,8 @@ class MarketMaker( object ):
             count = count + 1
         if count > 0:
             avg = total / count
-            print('recent pnl: ' + str(avgavgpnls[-1]) + ' avg avg pnl: ' + str(avg) + ' min: ' + str(minimum) + ' max: ' + str(maximum))
-            print('tps: ' + str(self.tps) + ' & sls: ' + str(self.sls))
+            #print('recent pnl: ' + str(avgavgpnls[-1]) + ' avg avg pnl: ' + str(avg) + ' min: ' + str(minimum) + ' max: ' + str(maximum))
+            #print('tps: ' + str(self.tps) + ' & sls: ' + str(self.sls))
         if not self.monitor:
             print_dict_of_dicts( {
                 k: {
@@ -598,15 +598,15 @@ class MarketMaker( object ):
             if self.vols[k] > 10:
                 gobreak = True
                 breakfor = 0.25
-                print('volatility high! taking 0.25hr break')
+                #print('volatility high! taking 0.25hr break')
             if self.vols[k] > 10:
                 gobreak = True
                 breakfor = 0.5
-                print('volatility high! taking 0.5hr break')
+                #print('volatility high! taking 0.5hr break')
             if self.vols[k] > 15:
                 gobreak = True
                 breakfor = 1
-                print('volatility high! taking 1hr break')
+                #print('volatility high! taking 1hr break')
 
         if gobreak == True:
             self.update_positions()
@@ -626,9 +626,9 @@ class MarketMaker( object ):
             else:
                 selling = False
                 size = positionSize * -1
-            print('positionSize: ' + str(positionSize))
+            #print('positionSize: ' + str(positionSize))
             size = size / len(self.client.positions())
-            print('size: ' + str(size))
+            #print('size: ' + str(size))
             try:
                 for p in self.client.positions():
                     sleep(0.01)
@@ -657,8 +657,8 @@ class MarketMaker( object ):
             self.vols               = OrderedDict()
             sleep(60 * 60 * breakfor)
 
-            #print( '\nMean Loop Time: %s' % round( self.mean_looptime, 2 ))
-            #print( '' )
+            ##print( '\nMean Loop Time: %s' % round( self.mean_looptime, 2 ))
+            ##print( '' )
         for k in self.positions.keys():
 
 
@@ -668,17 +668,17 @@ class MarketMaker( object ):
             else:
                 key = 'sizeBtc'
                 spot = self.get_spot()
-            #print(self.positions[k][key])
+            ##print(self.positions[k][key])
             if self.positions[k]['size'] > 10:
                 self.multsShort[k] = (self.positions[k]['size'] / 50) * POS_MOD
             if self.positions[k]['size'] < (-1 * 10 ):
                 self.multsLong[k] = (-1 * self.positions[k]['size'] / 50) * POS_MOD
 #Vols           
-        print(' ')
-        print(' ')
-        print(' ')
-        print(self.multsLong)
-        print(self.multsShort)
+        #print(' ')
+        #print(' ')
+        #print(' ')
+        #print(self.multsLong)
+        #print(self.multsShort)
     
     def place_orders( self ):
         if self.trial == True and int(time.time()) * 1000 - self.startTime > 5 * 24 * 60 * 60 * 1000:
@@ -707,7 +707,7 @@ class MarketMaker( object ):
                 pos_lim_long = pos_lim_long * (len(self.futures)- 1)
             
             expi            = self.futures[ fut ][ 'expi_dt' ]
-            ##print(self.futures[ fut ][ 'expi_dt' ])
+            ###print(self.futures[ fut ][ 'expi_dt' ])
             if self.eth is 0:
                 self.eth = 200
             
@@ -729,8 +729,8 @@ class MarketMaker( object ):
             
             #yqbtc  = max( self.PCT_QTY_BASE  * bal_btc, min_order_size_btc)
             qtybtc = self.PCT_QTY_BASE  * bal_btc
-            print('qtybtc ' + str(qtybtc))
-            print(pos_lim_long)
+            #print('qtybtc ' + str(qtybtc))
+            #print(pos_lim_long)
             nbids   = min( math.trunc( pos_lim_long  / qtybtc ), MAX_LAYERS )
             nasks   = min( math.trunc( pos_lim_short / qtybtc ), MAX_LAYERS )
             positionSize = 0
@@ -740,14 +740,14 @@ class MarketMaker( object ):
             #if 'PERPETUAL' in fut and self.thearb > 1 and positionSize < 0:
              #   nbids  = (nbids + (positionSize * -1)) # 30 / 10 = 3
             #    nbids = min(MAX_LAYERS * 1.5, nbids)
-            print('fut ' + fut)
-            print('bids ' + str(nbids))
-            print('asks ' + str(nasks))
+            #print('fut ' + fut)
+            #print('bids ' + str(nbids))
+            #print('asks ' + str(nasks))
             
 
-            print('fut ' + fut)
-            print('bids ' + str(nbids))
-            print('asks ' + str(nasks))    
+            #print('fut ' + fut)
+            #print('bids ' + str(nbids))
+            #print('asks ' + str(nasks))    
             nasks = int (nasks)
             nbids = int (nbids)
             
@@ -768,7 +768,7 @@ class MarketMaker( object ):
             if self.dsrsi < 20: #under
                 place_asks = 0
             if not place_bids and not place_asks:
-                #print( 'No bid no offer for %s' % fut, min_order_size_btc )
+                ##print( 'No bid no offer for %s' % fut, min_order_size_btc )
                 continue
                 
             tsz = self.get_ticksize( fut )            
@@ -787,14 +787,12 @@ class MarketMaker( object ):
                 eps = eps * (1+self.bbw[fut])
             if 3 in self.volatility:
                 eps = eps * (self.atr[fut]/100)
-            if fut == 'BTC-PERPETUAL':
-                print(' ')
-                print('eps of perp before predictions: ' + str(eps))
-
+            print('eps of perp before predictions: ' + str(eps))
+            print(self.PCT_QTY_BASE)
             eps = eps * ((self.predict_1 * self.predict_5) * (self.predict_1 * self.predict_5))
             if fut == 'BTC-PERPETUAL':
                 print('eps after predictions: ' + str(eps))
-                print(' ')
+                #print(' ')
             riskfac     = math.exp( eps )
 
             if self.positionGains[fut] == True:
@@ -810,7 +808,7 @@ class MarketMaker( object ):
                     pos_lim_long = pos_lim_long * (len(self.futures)- 1)
                 
                 expi            = self.futures[ fut ][ 'expi_dt' ]
-                ##print(self.futures[ fut ][ 'expi_dt' ])
+                ###print(self.futures[ fut ][ 'expi_dt' ])
                 if self.eth is 0:
                     self.eth = 200
                 if 'ETH' in fut:
@@ -866,7 +864,7 @@ class MarketMaker( object ):
                 if self.dsrsi < 20: #under
                     place_asks = 0
                 if not place_bids and not place_asks:
-                    #print( 'No bid no offer for %s' % fut, min_order_size_btc )
+                    ##print( 'No bid no offer for %s' % fut, min_order_size_btc )
                     continue
                     
                 tsz = self.get_ticksize( fut )            
@@ -935,8 +933,8 @@ class MarketMaker( object ):
                 bid_mkt = bbo[ 'bid' ]
                 ask_mkt = bbo[ 'ask' ]
                 mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
-                print('fut ' + fut)
-                print(mid)
+                #print('fut ' + fut)
+                #print(mid)
                 mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
                 
                 
@@ -977,8 +975,8 @@ class MarketMaker( object ):
                 bids = bbo[ 'bids' ][0]
                 ask_mkt = asks
                 mid = 0.5 * ( bids + asks )
-                print('fut ' + fut)
-                print(mid)
+                #print('fut ' + fut)
+                #print(mid)
                 mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
                 if place_bids:
                     
@@ -993,7 +991,7 @@ class MarketMaker( object ):
 
                     bids1[ 0 ]   = ticksize_floor( bids1[ 0 ], tsz )
 
-                    
+                    bidso = bids1
                 if place_asks:
                     
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
@@ -1006,11 +1004,11 @@ class MarketMaker( object ):
                         asks1    = [ ask0 * riskfac  ** i for i in range( 1, int(nasks) + 1 ) ]
                        
                     asks1[ 0 ]   = ticksize_ceil( asks1[ 0 ], tsz  )
-                
+                    askso = asks1
                 asksn = []
                 bidsn = []
-                askso = asks1
-                bidso = bids1
+                
+                
                 account         = self.client.account()
 
                 spot            = self.get_spot()
@@ -1023,7 +1021,7 @@ class MarketMaker( object ):
                     pos_lim_long2 = pos_lim_long2 * (len(self.futures)- 1)
 
                 expi            = self.futures[ fut ][ 'expi_dt' ]
-                ##print(self.futures[ fut ][ 'expi_dt' ])
+                ###print(self.futures[ fut ][ 'expi_dt' ])
                 if self.eth is 0:
                     self.eth = 200
                 
@@ -1051,8 +1049,8 @@ class MarketMaker( object ):
                 nasks2 = int (nasks2)
                 nbids2 = int (nbids2)
                 print ('---')
-                print(nasks2)
-                print(nbids2)
+                #print(nasks2)
+                #print(nbids2)
                 place_bids2 = nbids2 > 0
                 place_asks2 = nasks2 > 0
                 if place_asks:
@@ -1072,25 +1070,31 @@ class MarketMaker( object ):
                 if positionSize2 < 0:
                     positionSize2 = positionSize2 * -1
                 if place_asks2 == False and positionSize2 > self.maxqty  * 2.5 * 2.5:
-                    if len(askso) >= 1:
-                        asksn.append(askso[0])
-                    if len(askso) >= 2:
-                        asksn.append(askso[1])
+                    try:
+                        if len(askso) >= 1:
+                            asksn.append(askso[0])
+                        if len(askso) >= 2:
+                            asksn.append(askso[1])
+                    except:
+                        exception = 1
                 asks = asksn
                 if place_bids2 == True:
-                    if len(bids1) >= 1:
-                        bidsn.append(bids1[0])
-                        nbids = nbids + 1
-                    if len(bids1) >= 2:
-                        bidsn.append(bids1[1])
-                        nbids = nbids + 1
+                    try: 
+                        if len(bids1) >= 1:
+                            bidsn.append(bids1[0])
+                            nbids = nbids + 1
+                        if len(bids1) >= 2:
+                            bidsn.append(bids1[1])
+                            nbids = nbids + 1
+                    except:
+                        exception = 1
                     len_bid_ords = min( len( bid_ords ), nbids )
                 if place_bids2 == False and positionSize2 > self.maxqty  * 2.5 * 2.5:
                     if len(bidso) >= 1:
                         bidsn.append(bidso[0])
                     if len(bidso) >= 2:
                         asksn.append(bidso[1])
-                print(bidsn)
+                #print(bidsn)
                 bids = bidsn
                 
                 ords        = self.client.getopenorders( fut )
@@ -1119,10 +1123,10 @@ class MarketMaker( object ):
             asks = newasks
 
             bids = newbids
-            print(asks)
-            print(bids)
-            print(' ')
-            print( ' ')
+            #print(asks)
+            #print(bids)
+            #print(' ')
+            #print( ' ')
             len_bid_ords = min( len( bid_ords ), nbids ) 
             len_ask_ords    = min( len( ask_ords ), nasks )
             place_bids= len(bids) > 0
@@ -1132,10 +1136,10 @@ class MarketMaker( object ):
                 # BIDS
                  
 
-                print('===')
-                print('nbids')
-                print(nbids)
-                print(nasks)
+                #print('===')
+                #print('nbids')
+                #print(nbids)
+                #print(nasks)
                 if place_bids and i < nbids:
 
                     if i > 0 and len(bids) > i:
@@ -1167,18 +1171,12 @@ class MarketMaker( object ):
                     positionSize = 0
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
-                    print('-----')
-                    print('-----')
-                    print(fut)
-                    print(self.positionGains[fut])
+                    #print('-----')
+                    #print('-----')
+                    #print(fut)
+                    #print(self.positionGains[fut])
 
-                    if 'PERPETUAL' in fut and self.thearb > 1 and positionSize < 0:
-                        qty = qty * 1.2#len(self.futures) 
 
-                    elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize < 0:
-                        qty = qty * 1.2#len(self.futures)
-                    elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize > 0:
-                        qty = qty * 1.2#len(self.futures)
                     gogo = True
                     p1 = self.predict_1
                     p5 = self.predict_5
@@ -1188,33 +1186,33 @@ class MarketMaker( object ):
                         p5 = 0.2
                     if fut == 'BTC-PERPETUAL':
                         print(' ')
-                        print('predict_1: ' + str(p1) + ' & predict_5: ' + str(p5))
-                        print('qty of perp to buy before predictions: ' + str(qty))
+                        #print('predict_1: ' + str(p1) + ' & predict_5: ' + str(p5))
+                        #print('qty of perp to buy before predictions: ' + str(qty))
                     #qty = round(qty * (1/(math.sqrt(p1)*math.sqrt(p5))) / 2)
                     if fut == 'BTC-26JUN20':
                         print('qty after predictions: ' + str(qty))
-                        print(' ' )
+                        #print(' ' )
                         
-                    #print('pos size: ' + str(positionSize))
+                    ##print('pos size: ' + str(positionSize))
                     if qty < 0:
                         qty = qty * -1
                     if qty < 1:
                         qty = 1
                     if qty * 10 > self.maxqty:
                         self.maxqty = qty 
-                        print('---')
-                        print('self maxqty' + str(self.maxqty))
+                        #print('---')
+                        #print('self maxqty' + str(self.maxqty))
                     qtyold = qty
                     positionSize = 0
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']  
 
-                    if qtyold > qty:
-                        qty = qtyold
-                    if self.positionGains[fut] == True and self.positions[fut]['size'] > 0 and positionSize < 0:
-                        qty = qty * 1.5
+
+                    if self.positionGains[fut] == True and self.positions[fut]['size'] < 0 and positionSize > 0:
+                        qty = self.maxqty / 1.25
                     
 
+                    print(qty)
                     if qty < 1:
                         qty = 1
                                           
@@ -1231,18 +1229,19 @@ class MarketMaker( object ):
                         else:
                             ps = pps
                         ps = ps / len(self.futures) / 2
+                        ps = ps * 2
                         if ps < 1:
                             ps = 1
-                        if ps > self.maxqty * 2.5 * 5 * 1 * 2:
+                        if ps / 2 > self.maxqty * 2.5 * 5 * 1 * 2:
                             qty = ps
 
                     qty = int(qty)
                     if positionSize > 0:
-                        print((qty * MAX_LAYERS) / 2 + positionSize)
-                        print('maxqty: ' + str(self.maxqty))             
+                        #print((qty * MAX_LAYERS) / 2 + positionSize)
+                        #print('maxqty: ' + str(self.maxqty))             
                         if (((qty * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 5 * 1 * 1)):
                             if self.positions[fut]['size'] > 0:
-                                print('max skew on buy')
+                                #print('max skew on buy')
                                     
                                 try:
                                     oid = bid_ords[ i ][ 'orderId' ]
@@ -1252,7 +1251,7 @@ class MarketMaker( object ):
                                 gogo = False
                         if (((qty * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 5 * 1 * 1 * 2)):
                             if self.positions[fut]['size'] < 0:
-                                print('max skew on buy')
+                                #print('max skew on buy')
                                 try:
                                     oid = bid_ords[ i ][ 'orderId' ]
                                     cancel_oids.append( oid )
@@ -1260,12 +1259,12 @@ class MarketMaker( object ):
                                     abc123 = 1
                                     
                                 gogo = False
-                    print(gogo)
+                    #print(gogo)
                     if self.imselling[fut] == True:
-                        print(fut + ' fut2 true fut btc perp gogo false buying')
+                        #print(fut + ' fut2 true fut btc perp gogo false buying')
                         gogo = False
-                    print('i '+ str(i))
-                    print(len_bid_ords)
+                    #print('i '+ str(i))
+                    #print(len_bid_ords)
                     if i < len_bid_ords and gogo == True:    
 
                         
@@ -1306,15 +1305,15 @@ class MarketMaker( object ):
                                 print(e)
                                 
                     elif gogo == True:
-                        print('self.imselling[BTC-PERPETUAL]')
-                        print(self.imselling['BTC-PERPETUAL'])
-                        print('self.imbuying[BTC-PERPETUAL]')
-                        print(self.imbuying['BTC-PERPETUAL'])
+                        #print('self.imselling[BTC-PERPETUAL]')
+                        #print(self.imselling['BTC-PERPETUAL'])
+                        #print('self.imbuying[BTC-PERPETUAL]')
+                        #print(self.imbuying['BTC-PERPETUAL'])
                         #try:
                             #oid = bid_ords[ i ][ 'orderId' ]
                             #self.client.edit( oid, qty, prc )
                         #except Exception as e:
-                            #print(bid_ords)
+                            ##print(bid_ords)
                             #abc = 1
                         try:
                             if 'PERPETUAL' not in fut or self.perpbuy < 2:
@@ -1343,10 +1342,10 @@ class MarketMaker( object ):
                         except Exception as e:
                             i
                 # OFFERS
-                print('place_asks')
-                print(place_asks)
-                print('nasks')
-                print(nasks)
+                #print('place_asks')
+                #print(place_asks)
+                #print('nasks')
+                #print(nasks)
                 
 
                 if place_asks and i < nasks:
@@ -1388,12 +1387,6 @@ class MarketMaker( object ):
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
 
-                    if 'PERPETUAL' in fut and self.thearb < 1 and positionSize < 0: 
-                        qty = qty * 1.2#len(self.futures)
-                    elif 'PERPETUAL' not in fut and self.thearb < 1 and positionSize < 0:
-                        qty = qty * 1.2#len(self.futures)
-                    elif 'PERPETUAL' not in fut and self.thearb > 1 and positionSize > 0:
-                        qty = qty * 1.2#len(self.futures)
                     gogo = True
                     p1 = self.predict_1
                     p5 = self.predict_5
@@ -1403,8 +1396,8 @@ class MarketMaker( object ):
                         p5 = 0.2
                     if fut == 'BTC-26JUN20':
                         print(' ')
-                        print('predict_1: ' + str(p1) + ' & predict_5: ' + str(p5))
-                        print('qty of perp to sell before predictions: ' + str(qty))
+                        #print('predict_1: ' + str(p1) + ' & predict_5: ' + str(p5))
+                        #print('qty of perp to sell before predictions: ' + str(qty))
                     #qty = round(qty * (1/(math.sqrt(p1)*math.sqrt(p5))) / 2)
                         
                     if qty < 0:
@@ -1413,16 +1406,15 @@ class MarketMaker( object ):
                         qty = 1
                     if qty * 10 > self.maxqty:
                         self.maxqty = qty 
-                        print('---')
-                        print('self maxqty' + str(self.maxqty))
+                        #print('---')
+                        #print('self maxqty' + str(self.maxqty))
                     qtyold = qty
-                    if qtyold > qty:
-                        qty = qtyold
+
                     positionSize = 0
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
-                    if self.positionGains[fut] == True  and self.positions[fut]['size'] < 0 and positionSize > 0:
-                        qty = qty * 1.5
+                    if self.positionGains[fut] == True  and self.positions[fut]['size'] > 0 and positionSize < 0:
+                        qty = self.maxqty / 1.25
                     
                     if qty < 1:
                         qty = 1
@@ -1439,21 +1431,23 @@ class MarketMaker( object ):
                             ps = pps
 
                         ps = ps / len(self.futures) / 2 / 2
+
+                        ps = ps * 2
                         if ps < 1:
                             ps = 1
-                        if ps > self.maxqty * 2.5 * 5 * 1 * 2:
+                        if ps / 2 > self.maxqty * 2.5 * 5 * 1 * 2:
                             qty = ps
 
 
                     qty = int(qty)
-                    #print('pos size: ' + str(positionSize))
+                    ##print('pos size: ' + str(positionSize))
 
                     if positionSize < 0:
 
 
-                        print((qty * MAX_LAYERS) / 2 + positionSize * -1)
+                        #print((qty * MAX_LAYERS) / 2 + positionSize * -1)
                         if (((qty * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty * 2.5 * 5 * 1)) and self.positions[fut]['size'] < 0:
-                            print('max skew on sell')
+                            #print('max skew on sell')
                             try:
                                 oid = ask_ords[ i ][ 'orderId' ]
                                 cancel_oids.append( oid )
@@ -1462,7 +1456,7 @@ class MarketMaker( object ):
                                 
                             gogo = False
                         if (((qty * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty * 2 * 1.25 * 5 * 1)) and self.positions[fut]['size'] > 0:
-                            print('max skew on sell')
+                            #print('max skew on sell')
                             try:
                                 oid = ask_ords[ i ][ 'orderId' ]
                                 cancel_oids.append( oid )
@@ -1471,7 +1465,7 @@ class MarketMaker( object ):
                                 
                             gogo = False
                     if  self.imbuying[fut] == True:
-                        print(fut + ' fut true fut btc perp gogo false selling')
+                        #print(fut + ' fut true fut btc perp gogo false selling')
                         gogo = False
 
                     if i <= len_ask_ords and gogo == True: 
@@ -1516,7 +1510,7 @@ class MarketMaker( object ):
                             #oid = ask_ords[ i ][ 'orderId' ]
                             #self.client.edit( oid, qty, prc )
                         #except:
-                            #print('edit error')
+                            ##print('edit error')
                             #abc = 1
                         try:
                             if 'PERPETUAL' not in fut or self.perpsell < 2:
@@ -1546,7 +1540,7 @@ class MarketMaker( object ):
                 cancel_oids += [ o[ 'orderId' ] for o in ask_ords[ nasks : ]]
 
             for oid in cancel_oids:
-                #print(oid)
+                ##print(oid)
                 try:
                     self.client.cancel( oid )
                 except:
@@ -1557,12 +1551,12 @@ class MarketMaker( object ):
         try:
             
             strMsg = 'RESTARTING'
-            #print( strMsg )
+            print( strMsg )
             self.client.cancelall()
             strMsg += ' '
             for i in range( 0, 5 ):
                 strMsg += '.'
-                print( strMsg )
+                #print( strMsg )
                 sleep( 1 )
         except:
             pass
@@ -1590,12 +1584,12 @@ class MarketMaker( object ):
             eps = eps * (self.atr[fut]/100)
         if fut == 'BTC-PERPETUAL':
             print(' ')
-            print('eps of perp before predictions: ' + str(eps))
+            #print('eps of perp before predictions: ' + str(eps))
 
         eps = eps * self.predict_1 * self.predict_5
         if fut == 'BTC-PERPETUAL':
             print('eps after predictions: ' + str(eps))
-            print(' ')
+            #print(' ')
         riskfac     = math.exp( eps )
                 
 
@@ -1653,9 +1647,9 @@ class MarketMaker( object ):
                 self.arbmult['BTC-PERPETUAL'] = ({"arb": 1 / arb, "long":'BTC-PERPETUAL', "short": "BTC-PERPETUAL"})
             self.thearb = arb
             
-            print(self.arbmult)
-            print(self.arbmult)
-            print(self.arbmult)
+            #print(self.arbmult)
+            #print(self.arbmult)
+            #print(self.arbmult)
         arbplus = 0
         for k in btclist:
             m = self.get_bbo(k)
@@ -1668,8 +1662,8 @@ class MarketMaker( object ):
             ask_mkt = bbo[ 'ask' ]
             mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
             arb = mid1/mid
-            print('fut mid: ' + str(mid1))
-            print('perp mid: ' + str(mid))
+            #print('fut mid: ' + str(mid1))
+            #print('perp mid: ' + str(mid))
             if arb > 1.0004:
                  self.arbplus = self.arbplus + 1
             if arb > 1:
@@ -1682,9 +1676,9 @@ class MarketMaker( object ):
                 self.arbmult['BTC-PERPETUAL'] = ({"arb": 1 / arb, "long":'BTC-PERPETUAL', "short": "BTC-PERPETUAL"})
             self.thearb = arb
             
-            print(self.arbmult)
-            print(self.arbmult)
-            print(self.arbmult)
+            #print(self.arbmult)
+            #print(self.arbmult)
+            #print(self.arbmult)
         self.run_first()
 
         t_ts = t_out = t_loop = t_mtime = datetime.utcnow()
@@ -1718,7 +1712,7 @@ class MarketMaker( object ):
                     self.arbmult['BTC-PERPETUAL'] = ({"arb": 1 / arb, "long":'BTC-PERPETUAL', "short": "BTC-PERPETUAL"})
                 
                 self.thearb = arb
-                print(self.arbmult)
+                #print(self.arbmult)
             arbplus = 0
             for k in btclist:
                 m = self.get_bbo(k)
@@ -1731,8 +1725,8 @@ class MarketMaker( object ):
                 ask_mkt = bbo[ 'ask' ]
                 mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
                 arb = mid1/mid
-                print('fut mid: ' + str(mid1))
-                print('perp mid: ' + str(mid))
+                #print('fut mid: ' + str(mid1))
+                #print('perp mid: ' + str(mid))
                 if arb > 1.0004:
                      self.arbplus = self.arbplus + 1
                 if arb > 1:
@@ -1745,9 +1739,9 @@ class MarketMaker( object ):
                     self.arbmult['BTC-PERPETUAL'] = ({"arb": 1 / arb, "long":'BTC-PERPETUAL', "short": "BTC-PERPETUAL"})
                 self.thearb = arb
 
-                print(self.arbmult)
+                #print(self.arbmult)
             if arbplus != self.arbplus and self.arbplus != 0:
-                print('kill all pos on arbplus != self.arbplus')
+                #print('kill all pos on arbplus != self.arbplus')
                 #self.client.cancelall()
                 
                 try:
@@ -1784,7 +1778,7 @@ class MarketMaker( object ):
                 except:
                     abc123 = 1
             self.arbplus = arbplus
-            #print(self.arbmult)       
+            ##print(self.arbmult)       
             # Directional
             # 0: none
             # 1: StochRSI
@@ -1848,7 +1842,7 @@ class MarketMaker( object ):
                     positionPricesEth[p['instrument']] = mid < p['averagePrice']
                 else:
                 
-                    print(p)
+                    #print(p)
                     if p['floatingPl'] > 0:
                         self.positionGains[p['instrument']] = True
                     else:
@@ -1864,12 +1858,12 @@ class MarketMaker( object ):
             if 'BTC-PERPETUAL' in positionPrices:
                 if positionPrices['BTC-PERPETUAL'] == False:
                     buyPerp = True
-            print('buyperp ' + str(buyPerp))
+            #print('buyperp ' + str(buyPerp))
             actuallyBuyingPerp = False
             if 'BTC-PERPETUAL' in self.positions:
                 if self.positions['BTC-PERPETUAL']['size'] > 0:
                     actuallyBuyingPerp = True
-            print('actuallyBuyingPerp: ' + str(actuallyBuyingPerp))
+            #print('actuallyBuyingPerp: ' + str(actuallyBuyingPerp))
 
             self.lastposdiff = self.posdiff #300
             self.posdiff = positionPos #400
@@ -1892,21 +1886,21 @@ class MarketMaker( object ):
             if ts > 0 and ms > 0:
                 ratio = ts / ms
                 diffratio = ratio / 0.2
-                print('ratio: ' + str(ratio) + ' & diffratio: ' + str(diffratio))
+                #print('ratio: ' + str(ratio) + ' & diffratio: ' + str(diffratio))
             try:
                 if positionSize > 0:
                     if self.marketed > 0:
                         self.marketed = 0
                     self.wantstomarket = positionSize / 6
                     self.waittilmarket = self.waittilmarket - 1
-                    print('positionSize: ' + str(positionSize))
+                    #print('positionSize: ' + str(positionSize))
 
                     if positionSize > 1:
                         if self.waittilmarket <= 0 or self.posdiff / self.lastposdiff > 1.25:
                             #self.client.cancelall()
                             size = self.wantstomarket + self.marketed
                             size = size / diffratio
-                            print('size: ' + str(size))
+                            #print('size: ' + str(size))
                             if size > 1:
 
                                 #self.marketed = self.marketed - size / 10
@@ -1915,7 +1909,7 @@ class MarketMaker( object ):
                                 self.waittilmarket = 2
                                 #self.client.cancelall()
                                 sleep(0.01)
-                                print('waittilmarket 0 or pos/lastpos > 1.33, selling: ' + str(size) + ' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
+                                #print('waittilmarket 0 or pos/lastpos > 1.33, selling: ' + str(size) + ' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
                                 counter = 0
                                 for p in self.client.positions():
 
@@ -2001,7 +1995,7 @@ class MarketMaker( object ):
                             #self.client.cancelall()
                             size = self.wantstomarket - self.marketed #12.25 - 16.5
                             size = size / diffratio
-                            print('size: ' + str(size))
+                            #print('size: ' + str(size))
                             if size > 1:
                                 self.wantstomarket = 0
                                 self.waittilmarket = 2
@@ -2009,7 +2003,7 @@ class MarketMaker( object ):
                             
                                 #self.client.cancelall()
                                 #sleep(0.01)
-                                print('waittilmarket 0 or pos / lastpos < 0.75, buying: ' + str(size)  +' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
+                                #print('waittilmarket 0 or pos / lastpos < 0.75, buying: ' + str(size)  +' and marketed: ' + str(self.marketed) + ' and pos/lastpos: ' + str(self.posdiff / self.lastposdiff))
                                 counter = 0
                                 for p in self.client.positions():
                                     sleep(0.01)
@@ -2147,13 +2141,13 @@ class MarketMaker( object ):
         self.client.cancelall()
         self.sls = self.sls + 1
 
-        print("lalaallala")
+        #print("lalaallala")
         self.update_status()
-        print(self.trial)
+        #print(self.trial)
         if self.trial.lower() == 'false':
             self.trial = False
         elif self.trial.lower() == 'true':
-            print('trialing...')
+            #print('trialing...')
             self.trial = True
         if self.trial == True and int(time.time()) * 1000 - self.startTime > 5 * 24 * 60 * 60 * 1000:
             print('trial over!')
@@ -2216,7 +2210,7 @@ class MarketMaker( object ):
         if count > 0:
             avg = total
             avgavgpnls.append(avg)
-            #print('avg pl: ' + str(avg))
+            ##print('avg pl: ' + str(avg))
             positionSize = 0
             positionPos = 0
             for p in self.positions:
@@ -2226,7 +2220,7 @@ class MarketMaker( object ):
                 else:   
                     positionPos = positionPos + self.positions[p]['size']
             if avg > TP and positionSize != 0:
-                print('TP!')
+                #print('TP!')
                 self.client.cancelall()
                 self.tps = self.tps + 1
                 
@@ -2236,7 +2230,7 @@ class MarketMaker( object ):
                 else:
                     selling = False
                     size = positionSize * -1
-                print('size: ' + str(size))
+                #print('size: ' + str(size))
                 try:
                     for p in self.client.positions():
                         sleep(0.01)
@@ -2268,16 +2262,16 @@ class MarketMaker( object ):
                 else:   
                     positionPos = positionPos + self.positions[p]['size']
             if avg < SL and positionSize != 0:
-                print('SL! ' + str(avg))
+                #print('SL! ' + str(avg))
                 self.update_positions()
                 self.client.cancelall()
                 self.sls = self.sls + 1
                 self.slsinarow = self.slsinarow + 1
                 
                 if self.slsinarow == 2:
-                    print(' ')
-                    print('two sls in a row!')
-                    print(' ')
+                    #print(' ')
+                    #print('two sls in a row!')
+                    #print(' ')
                     self.update_positions()
                     self.client.cancelall()
                     self.sls = self.sls + 1
@@ -2296,9 +2290,9 @@ class MarketMaker( object ):
                     else:
                         selling = False
                         size = positionSize * -1
-                    print('positionSize: ' + str(positionSize))
+                    #print('positionSize: ' + str(positionSize))
                     size = size / len(self.client.positions())
-                    print('size: ' + str(size))
+                    #print('size: ' + str(size))
                     try:
                         for p in self.client.positions():
                             sleep(0.01)
@@ -2322,6 +2316,7 @@ class MarketMaker( object ):
                                     self.client.buy(  p['instrument'], size, mid * 1.02, 'false' )
                         sleep(60 * 0.5)
                     except Exception as e:
+                        
                         print(e)
                     sleep(60 * 0.5)
                 if positionSize > 0:
@@ -2330,9 +2325,9 @@ class MarketMaker( object ):
                 else:
                     selling = False
                     size = positionSize * -1
-                print('positionSize: ' + str(positionSize))
+                #print('positionSize: ' + str(positionSize))
                 size = size / len(self.client.positions())
-                print('size: ' + str(size))
+                #print('size: ' + str(size))
                 try:
                     for p in self.client.positions():
                         sleep(0.01)
@@ -2365,7 +2360,7 @@ class MarketMaker( object ):
         old5 = mmbot.predict_5
         try:
             resp = requests.get('http://jare.cloud:8089/predictions').json()
-            print(resp)
+            #print(resp)
             if resp != 500:
                 if '1m' in resp: 
                     mmbot.predict_1 = float(resp['1m'].replace('"',"")) 
@@ -2378,11 +2373,11 @@ class MarketMaker( object ):
                         mmbot.predict_1 = old1
                     if mmbot.predict_5 < 0:
                         mmbot.predict_5 = old5
-                    print(' ')
-                    print('New predictions!')
-                    print('Predict 1m: ' + str(mmbot.predict_1))
-                    print('Predict 5m:' + str(mmbot.predict_5))
-                    print(' ')
+                    #print(' ')
+                    #print('New predictions!')
+                    #print('Predict 1m: ' + str(mmbot.predict_1))
+                    #print('Predict 5m:' + str(mmbot.predict_5))
+                    #print(' ')
         except Exception as e:
             print(e)
             mmbot.predict_1 = 0.5
@@ -2445,10 +2440,10 @@ class MarketMaker( object ):
             if self.startbtc != 0:
                 balances = {'apikey2': KEY2, 'amounts': self.amounts, 'fees': self.fees, 'startTime': self.startTime, 'apikey': KEY, 'usd': self.equity_usd + self.equity_usd2, 'btc': self.equity_btc + self.equity_btc2, 'btcstart': self.startbtc + self.startbtc2, 'usdstart': self.startUsd + self.startUsd2}
                 resp = requests.post("http://jare.cloud:8080/subscribers", data=balances, verify=False, timeout=2)
-                print(resp)
+                #print(resp)
         except Exception as e:
             print(e)
-        print('equity usd rounded ' + str(int(self.equity_usd * 10) / 10))
+        #print('equity usd rounded ' + str(int(self.equity_usd * 10) / 10))
         positionSize2 = 0
         positionPos2 = 0    	
         self.update_positions()
@@ -2463,11 +2458,11 @@ class MarketMaker( object ):
             else:
                 skewingneg = skewingneg + 1
         if positionSize is  0 and (skewingpos is 0 and skewingneg is 0):  
-            print('0 on the dot 111!')
-            print(self.arbmult)
+            #print('0 on the dot 111!')
+            #print(self.arbmult)
           
             for p in self.arbmult.keys():
-                print(p)
+                #print(p)
                 if self.arbmult[p]['arb'] < 1:
                     bbo     = self.get_bbo( self.arbmult[p]['short'] )
                 else:
@@ -2484,15 +2479,15 @@ class MarketMaker( object ):
                         self.client.sell(  p, self.maxqty * 2.5 * 5 * 1 / len(self.futures), mid * 0.98, 'false' )
                 else:
 
-                    print('0 on the dot 222!')
-                    print(self.arbmult)
+                    #print('0 on the dot 222!')
+                    #print(self.arbmult)
                     if self.arbmult[p]['arb'] > 1 :
                         self.client.sell(  p, self.maxqty * 2.5 * 5 * 1 * 2 / len(self.futures), mid * 0.98, 'false' )
                     else:
                         self.client.buy(  p, self.maxqty * 2.5 * 5 * 1 * 2 / len(self.futures), mid * 1.02, 'false' )
 
         for p in self.positions2:
-            print(self.positions2[p]['size'])
+            #print(self.positions2[p]['size'])
             positionSize2 = positionSize2 + self.positions2[p]['size']
             if self.positions2[p]['size'] < 0:
                 positionPos2 = positionPos2 - self.positions2[p]['size']
@@ -2504,8 +2499,8 @@ class MarketMaker( object ):
         if usd_short * -1 != int(equities) / 100: #=-100 90  100 90 +10 80 90 -10
             size = (usd_short * -1  - (int(equities) / 100))  #-210 138
             try:
-                print('size0: ' + str(size))
-                #print('adjust short!')
+                #print('size0: ' + str(size))
+                ##print('adjust short!')
                 
                 self.client2.cancelall()
                 
@@ -2513,16 +2508,16 @@ class MarketMaker( object ):
                 if size < 0:
                     selling = True
                     size = size * -1
-                #print('positionSize: ' + str(positionSize2))
-                print('size: ' + str(size))
+                ##print('positionSize: ' + str(positionSize2))
+                #print('size: ' + str(size))
                 if usd_short == 0:
                    usd_short = 1
-                print('usd_short: ' + str(usd_short))
+                #print('usd_short: ' + str(usd_short))
                 
                 size = size / 3
                 if size > 1:
-                    print('adjust short!')
-                    print('size2: ' + str(size))
+                    #print('adjust short!')
+                    #print('size2: ' + str(size))
                     try:
                         for p in self.futures.keys():
                             sleep(0.01)
@@ -2531,7 +2526,7 @@ class MarketMaker( object ):
                             bid_mkt = bbo[ 'bid' ]
                             ask_mkt = bbo[ 'ask' ]
                             mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
-                            print(p)
+                            #print(p)
 #                            self.client2.sell(  p, size, mid * 0.98, 'false' )
 
                         #else:
@@ -2547,8 +2542,8 @@ class MarketMaker( object ):
                 print(e)
 
 
-        print('equity')
-        print(self.equity_btc)
+        #print('equity')
+        #print(self.equity_btc)
         self.update_positions()
         for k in self.positions.keys():
 
@@ -2674,9 +2669,9 @@ class MarketMaker( object ):
         for s in self.vols.keys():
             
             x   = p[ s ]            
-            #print(x)
+            ##print(x)
             dx  = x[ 0 ] / x[ 1 ] - 1
-            #print(dx)
+            ##print(dx)
             dt  = ( t[ 0 ] - t[ 1 ] ).total_seconds()
             v   = min( dx ** 2 / dt, cov_cap ) * NSECS
             v   = w * v + ( 1 - w ) * self.vols[ s ] ** 2
@@ -2704,12 +2699,12 @@ if __name__ == '__main__':
         mmbot.run()
         
     except( KeyboardInterrupt, SystemExit ):
-        #print( "Cancelling open orders" )
+        ##print( "Cancelling open orders" )
         mmbot.client.cancelall()
         sys.exit()
     except Exception as e:
         print(e)
-        print( traceback.format_exc())
+        #print( traceback.format_exc())
         if args.restart:
             mmbot.restart()
 
