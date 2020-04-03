@@ -1124,6 +1124,8 @@ class MarketMaker( object ):
             
             place_bids= len(bids) > 0
             place_asks = len(asks) > 0
+            nbids = len(bids)
+            nasks = len(asks)
             for i in range( min( nbids, nasks, MAX_LAYERS )):
                 sleep(0.01)
                 # BIDS
