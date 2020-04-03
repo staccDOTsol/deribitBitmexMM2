@@ -1866,6 +1866,10 @@ class MarketMaker( object ):
             self.posdiff = positionPos #400
             ts = 0
             ms = 0
+
+            self.tradeids = []
+            self.amounts = 0
+            self.fees = 0*
             for fut in self.futures.keys():
                 trades = self.client.tradehistory(1000, fut)
                 for t in trades:

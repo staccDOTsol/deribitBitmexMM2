@@ -1171,7 +1171,7 @@ class MarketMaker( object ):
                     qtyold = qty
                     if qtyold > qty:
                         qty = qtyold
-                    if self.positionGains[fut] == True:
+                    if self.positionGains[fut] == True :
                         qty = qty * 1.25
                     else:
                         qty = qty * 0.25
@@ -1842,6 +1842,10 @@ class MarketMaker( object ):
             self.lastposdiff = self.posdiff #300
             self.posdiff = positionPos #400
             ts = 0
+            
+            self.tradeids = []
+            self.amounts = 0
+            self.fees = 0
             ms = 0
             for fut in self.futures.keys():
                 trades = self.client.tradehistory(1000, fut)
