@@ -1211,8 +1211,7 @@ class MarketMaker( object ):
                         qty = qtyold
                     if self.positionGains[fut] == True and self.positions[fut]['size'] < 0 and positionSize > 0:
                         qty = qty * 1.25
-                    else:
-                        qty = qty * 0.25
+                    
 
                     if qty < 1:
                         qty = 1
@@ -1426,8 +1425,7 @@ class MarketMaker( object ):
                         positionSize = positionSize + self.positions[p]['size']
                     if self.positionGains[fut] == True  and self.positions[fut]['size'] > 0 and positionSize < 0:
                         qty = qty * 1.25
-                    else:
-                        qty = qty * 0.25
+                    
                     if qty < 1:
                         qty = 1
                     
