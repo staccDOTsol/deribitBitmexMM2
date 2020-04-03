@@ -419,34 +419,30 @@ class MarketMaker( object ):
             if self.diff3 > self.maxMaxDD and self.diff3 != 0:
                 print('broke max max dd! sleep 24hr')
                 self.client.cancelall()
-                self.sls = self.sls + 1
+                self.tps = self.tps + 1
+                
+                if positionSize > 0:
+                    selling = True
+                    size = positionSize
+                else:
+                    selling = False
+                    size = positionSize * -1
+                print('size: ' + str(size))
                 try:
                     for p in self.client.positions():
                         sleep(0.01)
-                        if 'ETH' in p['instrument']:
-                            size = p['size']
-                        else:
-                            size = p['size']
-                        direction = p['direction']
-                        if direction == 'buy':
-                            size = size
-                            bbo     = self.get_bbo( p['instrument'] )
-                            bid_mkt = bbo[ 'bid' ]
-                            ask_mkt = bbo[ 'ask' ]
-                            mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
+
+                        bbo     = self.get_bbo( p['instrument'] )
+                        bid_mkt = bbo[ 'bid' ]
+                        ask_mkt = bbo[ 'ask' ]
+                        mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
+                        if selling:
                             if 'ETH' in p['instrument']:
                                 self.client.sell(  p['instrument'], size, mid * 0.98, 'false' )
                             else:
                                 self.client.sell(  p['instrument'], size, mid * 0.98, 'false' )
 
                         else:
-
-                            bbo     = self.get_bbo( p['instrument'] )
-                            bid_mkt = bbo[ 'bid' ]
-                            ask_mkt = bbo[ 'ask' ]
-                            mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
-                            if size < 0:
-                                size = size * -1
                             if 'ETH' in p['instrument']:
                                 self.client.buy(  p['instrument'], size, mid * 1.02, 'false' )
                             else:
@@ -463,29 +459,29 @@ class MarketMaker( object ):
                 print('broke min max dd! sleep 24hr')
                 self.client.cancelall()
                 self.sls = self.sls + 1
+                
+                if positionSize > 0:
+                    selling = True
+                    size = positionSize
+                else:
+                    selling = False
+                    size = positionSize * -1
+                print('size: ' + str(size))
                 try:
                     for p in self.client.positions():
                         sleep(0.01)
-                        if 'ETH' in p['instrument']:
-                            size = p['size']
-                        else:
-                            size = p['size']
-                        direction = p['direction']
 
                         bbo     = self.get_bbo( p['instrument'] )
                         bid_mkt = bbo[ 'bid' ]
                         ask_mkt = bbo[ 'ask' ]
                         mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
-                        if direction == 'buy':
-                            size = size
+                        if selling:
                             if 'ETH' in p['instrument']:
                                 self.client.sell(  p['instrument'], size, mid * 0.98, 'false' )
                             else:
                                 self.client.sell(  p['instrument'], size, mid * 0.98, 'false' )
 
                         else:
-                            if size < 0:
-                                size = size * -1
                             if 'ETH' in p['instrument']:
                                 self.client.buy(  p['instrument'], size, mid * 1.02, 'false' )
                             else:
