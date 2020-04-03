@@ -74,10 +74,10 @@ args    = parser.parse_args()
 URL     = 'https://www.deribit.com'#ctrl+h!!!!!
 skews = []
 
-KEY2 = "5HkSPCwo"
-SECRET2 = "z5fHc3FFB_SrVmEK6z0Unc-CjtHVU9_5pNMCdbXw_K0"
-KEY     = 'Pl-BmicT'
-SECRET  = '8IbGP-Q7YJk-Eabrk5jYghQbMD5ajKuwJwTsQ5iOrfk'
+export KEY2="5HkSPCwo"
+export SECRET2="z5fHc3FFB_SrVmEK6z0Unc-CjtHVU9_5pNMCdbXw_K0"
+export KEY='Pl-BmicT'
+export SECRET='8IbGP-Q7YJk-Eabrk5jYghQbMD5ajKuwJwTsQ5iOrfk'
 ULTRACONSERVATIVE = True
 BP                  = 1e-4      # one basis point
 BTC_SYMBOL          = 'btc'

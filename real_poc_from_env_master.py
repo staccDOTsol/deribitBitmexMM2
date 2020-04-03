@@ -155,6 +155,7 @@ class MarketMaker( object ):
         self.equity_btc_init    = None
         self.con_size           = float( CONTRACT_SIZE )
         self.client             = None
+        self.defaultqty = None
         self.perpbuy = 0
         
         self.amounts = 0
@@ -1138,8 +1139,9 @@ class MarketMaker( object ):
                         prc = ticksize_floor( min( bids[ i ], bids[ i - 1 ] - tsz ), tsz )
                     else:
                         prc = bids[ 0 ]
-
-                    qty = round( prc * qtybtc / (con_sz / 1) ) 
+                    if self.defaultqty == None:
+                       self.defaultqty = round( prc * qtybtc / (con_sz / 1) ) 
+                    qty = self.defaultqty
                     print(qty)
                     if 4 in self.quantity_switch:
                         if self.diffdeltab[fut] > 0 or self.diffdeltab[fut] < 0:
@@ -1156,9 +1158,6 @@ class MarketMaker( object ):
                     print(qty)  
                     if qty < 0:
                         qty = qty * -1
-                    if 'ETH' in fut:
-                        qty = round( (prc * qtybtc / (con_sz / 1)) * self.get_eth()) 
-                        print(qty)
                     
                     positionSize = 0
                     for p in self.positions:
@@ -1206,8 +1205,8 @@ class MarketMaker( object ):
                     positionSize = 0
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']  
-                    if self.positionGains[fut] == True and self.positions[fut]['size'] > 0 and positionSize < 0:
-                        qty = self.maxqty / 1.25
+                    if self.positionGains[fut] == True and self.positions[fut]['size'] < 0 and positionSize > 0:
+                        qty = qty * 1.5
                     
 
                     if qty < 1:
@@ -1354,8 +1353,10 @@ class MarketMaker( object ):
                         prc = ticksize_ceil( max( asks[ i ], asks[ i - 1 ] + tsz ), tsz )
                     else:
                         prc = asks[ 0 ]
-                        
-                    qty = round( prc * qtybtc / (con_sz / 1) )
+                    
+                    if self.defaultqty == None:
+                       self.defaultqty = round( prc * qtybtc / (con_sz / 1) ) 
+                    qty = self.defaultqty
                       
                     print(qty)
                     #print(qty)
@@ -1380,9 +1381,7 @@ class MarketMaker( object ):
                     print(qty)    
                     if qty < 0:
                         qty = qty * -1    
-                    if 'ETH' in fut:
-                        
-                        qty = round( (prc * qtybtc / (con_sz / 1)) * self.get_eth())
+
                     positionSize = 0
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
@@ -1420,8 +1419,8 @@ class MarketMaker( object ):
                     positionSize = 0
                     for p in self.positions:
                         positionSize = positionSize + self.positions[p]['size']
-                    if self.positionGains[fut] == True  and self.positions[fut]['size'] < 0 and positionSize > 0:
-                        qty = self.maxqty / 1.25
+                    if self.positionGains[fut] == True  and self.positions[fut]['size'] > 0 and positionSize < 0:
+                        qty = qty * 1.5
                     
                     if qty < 1:
                         qty = 1
