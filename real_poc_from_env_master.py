@@ -1845,12 +1845,12 @@ class MarketMaker( object ):
             for fut in self.futures.keys():
                 trades = self.client.tradehistory(1000, fut)
                 for t in trades:
+                    timestamp = time.time() * 1000 - 24 * 60 * 60 * 1000
 
                     if t['tradeId'] not in self.tradeids:
-                        
                         self.tradeids.append(t['tradeId'])
                         self.amounts = self.amounts + t['amount']
-                        self.fees = self.fees + (t['fee'])
+                        self.fees  = self.fees + (t['fee'])
                     if t['liquidity'] == 'T':
                         ts = ts + t['amount']
                     else:
@@ -2053,7 +2053,9 @@ class MarketMaker( object ):
                 print(e)
             self.perps = 0
             self.perps2 = 0
-
+            self.amounts = 0
+            self.fees = 0
+            self.tradeids = []
             self.place_orders()
             self.avg_pnl_sl_tp()
             # Display status to terminal
