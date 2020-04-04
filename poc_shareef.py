@@ -1120,154 +1120,195 @@ class MarketMaker( object ):
             nbids = len(bids)
             nasks = len(asks)
             for  i in range( min( nbids, nasks, MAX_LAYERS )):
-                sleep(0.01)
-                # BIDS
-                 
+                try:
+                    sleep(0.01)
+                    # BIDS
+                     
 
-                print('===')
-                print('nbids')
-                print(nbids)
-                print(nasks)
-                if place_bids and i < nbids:
+                    print('===')
+                    print('nbids')
+                    print(nbids)
+                    print(nasks)
+                    if place_bids and i < nbids:
 
-                    if i > 0 and len(bids) > i:
-                        prc = ticksize_floor( min( bids[ i ], bids[ i - 1 ] - tsz ), tsz )
-                    else:
-                        prc = bids[ 0 ]
+                        if i > 0 and len(bids) > i:
+                            prc = ticksize_floor( min( bids[ i ], bids[ i - 1 ] - tsz ), tsz )
+                        else:
+                            prc = bids[ 0 ]
 
-                    if self.defaultqty == None:
-                       self.defaultqty = round( prc * qtybtc / (con_sz / 1) ) 
-                    qty = self.defaultqty
-                    print('qty qty')
-                    print(qty)
-                    if 4 in self.quantity_switch:
-                        if self.diffdeltab[fut] > 0 or self.diffdeltab[fut] < 0:
-                            qty = round(qty / (self.diffdeltab[fut])) 
-                    print(qty)
-                    if 2 in self.quantity_switch:
-                        qty = round ( qty * self.buysellsignal[fut])    
-                    print(qty)
-                    if 3 in self.quantity_switch:
-                        qty = round (qty *self.multsLong[fut])   
-                    print(qty)
-                    if 1 in self.quantity_switch:
-                        qty = round (qty / self.diff) 
-                    print(qty)  
-                    if qty < 0:
-                        qty = qty * -1
-                    if 'ETH' in fut:
-                        qty = round( (prc * qtybtc / (con_sz / 1)) * self.get_eth()) 
+                        if self.defaultqty == None:
+                           self.defaultqty = round( prc * qtybtc / (con_sz / 1) ) 
+                        qty = self.defaultqty
+                        print('qty qty')
                         print(qty)
-                    
-                    positionSize = 0
-                    for p in self.positions:
-                        positionSize = positionSize + self.positions[p]['size']
-                    print('-----')
-                    print('-----')
-                    print(fut)
-                    print(self.positionGains[fut])
-
-
-                    gogo = True
-                    p1 = self.predict_1
-                    p5 = self.predict_5
-                    if p1 < 0.2:
-                        p1 = 0.2
-                    if p5 < 0.2:
-                        p5 = 0.2
-                    if fut == 'BTC-PERPETUAL':
-                        print(' ')
-                        print('predict_1: ' + str(p1) + ' & predict_5: ' + str(p5))
-                        print('qty of perp to buy before predictions: ' + str(qty))
-                    #qty = round(qty * (1/(math.sqrt(p1)*math.sqrt(p5))) / 2)
-                    if fut == 'BTC-26JUN20':
-                        print('qty after predictions: ' + str(qty))
-                        print(' ' )
+                        if 4 in self.quantity_switch:
+                            if self.diffdeltab[fut] > 0 or self.diffdeltab[fut] < 0:
+                                qty = round(qty / (self.diffdeltab[fut])) 
+                        print(qty)
+                        if 2 in self.quantity_switch:
+                            qty = round ( qty * self.buysellsignal[fut])    
+                        print(qty)
+                        if 3 in self.quantity_switch:
+                            qty = round (qty *self.multsLong[fut])   
+                        print(qty)
+                        if 1 in self.quantity_switch:
+                            qty = round (qty / self.diff) 
+                        print(qty)  
+                        if qty < 0:
+                            qty = qty * -1
+                        if 'ETH' in fut:
+                            qty = round( (prc * qtybtc / (con_sz / 1)) * self.get_eth()) 
+                            print(qty)
                         
-                    #print('pos size: ' + str(positionSize))
-                    if qty < 0:
-                        qty = qty * -1
-                    if qty < 1:
-                        qty = 1
-                    if qty * 10 > self.maxqty:
-                        self.maxqty = qty 
-                        print('---')
-                        print('self maxqty' + str(self.maxqty))
-                    qtyold = qty
-                    positionSize = 0
-                    for p in self.positions:
-                        positionSize = positionSize + self.positions[p]['size']  
+                        positionSize = 0
+                        for p in self.positions:
+                            positionSize = positionSize + self.positions[p]['size']
+                        print('-----')
+                        print('-----')
+                        print(fut)
+                        print(self.positionGains[fut])
 
 
-                    if self.positionGains[fut] == True and self.positions[fut]['size'] > 0 and positionSize < 0:
-                        qty = qty * 1.55
-                    
-
-                    print(qty)
-                    if qty < 1:
-                        qty = 1
-                                          
-                    if positionSize < 0:
-                        #len(self.futures)
-                        
+                        gogo = True
+                        p1 = self.predict_1
+                        p5 = self.predict_5
+                        if p1 < 0.2:
+                            p1 = 0.2
+                        if p5 < 0.2:
+                            p5 = 0.2
+                        if fut == 'BTC-PERPETUAL':
+                            print(' ')
+                            print('predict_1: ' + str(p1) + ' & predict_5: ' + str(p5))
+                            print('qty of perp to buy before predictions: ' + str(qty))
+                        #qty = round(qty * (1/(math.sqrt(p1)*math.sqrt(p5))) / 2)
+                        if fut == 'BTC-26JUN20':
+                            print('qty after predictions: ' + str(qty))
+                            print(' ' )
+                            
+                        #print('pos size: ' + str(positionSize))
+                        if qty < 0:
+                            qty = qty * -1
                         if qty < 1:
                             qty = 1
-                        pps = 0
+                        if qty * 10 > self.maxqty:
+                            self.maxqty = qty 
+                            print('---')
+                            print('self maxqty' + str(self.maxqty))
+                        qtyold = qty
+                        positionSize = 0
                         for p in self.positions:
-                            pps = pps + self.positions[p]['size']
-                        if pps  < 0:
-                            ps = pps * -1
-                        else:
-                            ps = pps
-                        ps = ps / len(self.futures) / 2
-                        ps = ps * 2
-                        if ps < 1:
-                            ps = 1
-                        if ps > (self.maxqty * 2.5 * 5 * 1 * 1) / len(self.futures) / 2:
-                            qty = ps
-                    if self.positions[fut]['size'] < 0:
-                        qty = qty * 1.5        
-                    qty = int(qty)
-                    if positionSize > 0:
-                        print((qty * MAX_LAYERS) / 2 + positionSize)
-                        print('maxqty: ' + str(self.maxqty))             
-                        if (((qty * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 5 * 1 * 1)):
-                            if self.positions[fut]['size'] > 0:
-                                print('max skew on buy')
-                                    
-                                try:
-                                    oid = bid_ords[ i ][ 'orderId' ]
-                                    cancel_oids.append( oid )
-                                except:
-                                    abc123 = 1
-                                gogo = False
-                        if (((qty * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 5 * 1 * 1 * 2)):
-                            if self.positions[fut]['size'] < 0:
-                                print('max skew on buy')
-                                try:
-                                    oid = bid_ords[ i ][ 'orderId' ]
-                                    cancel_oids.append( oid )
-                                except:
-                                    abc123 = 1
-                                    
-                                gogo = False
-                    print(gogo)
-                    if self.imselling[fut] == True:
-                        print(fut + ' fut2 true fut btc perp gogo false buying')
-                        gogo = False
-                    print('i '+ str(i))
-                    print(len_bid_ords)
-                    if i < len_bid_ords and gogo == True:    
+                            positionSize = positionSize + self.positions[p]['size']  
 
+
+                        if self.positionGains[fut] == True and self.positions[fut]['size'] > 0 and positionSize < 0:
+                            qty = qty * 1.55
                         
-                        try:
-                            oid = bid_ords[ i ][ 'orderId' ]
-                            self.client.edit( oid, qty, prc )
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except:
-                            try:
 
+                        print(qty)
+                        if qty < 1:
+                            qty = 1
+                                              
+                        if positionSize < 0:
+                            #len(self.futures)
+                            
+                            if qty < 1:
+                                qty = 1
+                            pps = 0
+                            for p in self.positions:
+                                pps = pps + self.positions[p]['size']
+                            if pps  < 0:
+                                ps = pps * -1
+                            else:
+                                ps = pps
+                            ps = ps / len(self.futures) / 2
+                            ps = ps * 2
+                            if ps < 1:
+                                ps = 1
+                            if ps > (self.maxqty * 2.5 * 5 * 1 * 1) / len(self.futures) / 2:
+                                qty = ps
+                        if self.positions[fut]['size'] < 0:
+                            qty = qty * 1.5        
+                        qty = int(qty)
+                        if positionSize > 0:
+                            print((qty * MAX_LAYERS) / 2 + positionSize)
+                            print('maxqty: ' + str(self.maxqty))             
+                            if (((qty * MAX_LAYERS) / 2 + positionSize > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 5 * 1 * 1)):
+                                if self.positions[fut]['size'] > 0:
+                                    print('max skew on buy')
+                                        
+                                    try:
+                                        oid = bid_ords[ i ][ 'orderId' ]
+                                        cancel_oids.append( oid )
+                                    except:
+                                        abc123 = 1
+                                    gogo = False
+                            if (((qty * MAX_LAYERS) / 2 + positionSize > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize > self.maxqty * 2.5 * 5 * 1 * 1 * 2)):
+                                if self.positions[fut]['size'] < 0:
+                                    print('max skew on buy')
+                                    try:
+                                        oid = bid_ords[ i ][ 'orderId' ]
+                                        cancel_oids.append( oid )
+                                    except:
+                                        abc123 = 1
+                                        
+                                    gogo = False
+                        print(gogo)
+                        if self.imselling[fut] == True:
+                            print(fut + ' fut2 true fut btc perp gogo false buying')
+                            gogo = False
+                        print('i '+ str(i))
+                        print(len_bid_ords)
+                        if i < len_bid_ords and gogo == True:    
+
+                            
+                            try:
+                                oid = bid_ords[ i ][ 'orderId' ]
+                                self.client.edit( oid, qty, prc )
+                            except (SystemExit, KeyboardInterrupt):
+                                raise
+                            except:
+                                try:
+
+                                    if 'PERPETUAL' not in fut or self.perpbuy < 2:
+                                        bought = False
+                                        if self.arbmult[fut]['arb'] > 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5 * 1:
+                                            self.client.buy( fut, qty, prc, 'true' )
+                                            if 'PERPETUAL' in fut:
+                                                bought = True
+
+
+                                        if self.arbmult[fut]['arb'] < 1 and  positionSize - qty /  2<= self.maxqty * 2.5 * 5 * 1:
+                                            self.client.buy(  fut, qty, prc, 'true' )
+                                            if 'PERPETUAL' in fut:
+                                                bought = True
+
+                                        if self.arbmult[fut]['arb'] == 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5 * 1:
+                                            self.client.buy( fut, qty, prc, 'true' )
+                                            if 'PERPETUAL' in fut:
+                                                bought = True
+                                        if 'PERPETUAL' in fut and bought == True:
+                                            self.perpbuy = self.perpbuy + 1
+
+
+                                    
+                                    #self.logger.warn( 'Edit failed for %s' % oid )
+                                except (SystemExit, KeyboardInterrupt):
+                                    raise
+                                except Exception as e:
+                                    print(e)
+                                    
+                        elif gogo == True:
+                            print('self.imselling[BTC-PERPETUAL]')
+                            print(self.imselling['BTC-PERPETUAL'])
+                            print('self.imbuying[BTC-PERPETUAL]')
+                            print(self.imbuying['BTC-PERPETUAL'])
+                            #try:
+                                #oid = bid_ords[ i ][ 'orderId' ]
+                                #self.client.edit( oid, qty, prc )
+                            #except Exception as e:
+                                #print(bid_ords)
+                                #abc = 1
+                            try:
                                 if 'PERPETUAL' not in fut or self.perpbuy < 2:
                                     bought = False
                                     if self.arbmult[fut]['arb'] > 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5 * 1:
@@ -1280,7 +1321,6 @@ class MarketMaker( object ):
                                         self.client.buy(  fut, qty, prc, 'true' )
                                         if 'PERPETUAL' in fut:
                                             bought = True
-
                                     if self.arbmult[fut]['arb'] == 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5 * 1:
                                         self.client.buy( fut, qty, prc, 'true' )
                                         if 'PERPETUAL' in fut:
@@ -1289,245 +1329,209 @@ class MarketMaker( object ):
                                         self.perpbuy = self.perpbuy + 1
 
 
-                                
-                                #self.logger.warn( 'Edit failed for %s' % oid )
+                                    
                             except (SystemExit, KeyboardInterrupt):
                                 raise
                             except Exception as e:
-                                print(e)
-                                
-                    elif gogo == True:
-                        print('self.imselling[BTC-PERPETUAL]')
-                        print(self.imselling['BTC-PERPETUAL'])
-                        print('self.imbuying[BTC-PERPETUAL]')
-                        print(self.imbuying['BTC-PERPETUAL'])
-                        #try:
-                            #oid = bid_ords[ i ][ 'orderId' ]
-                            #self.client.edit( oid, qty, prc )
-                        #except Exception as e:
-                            #print(bid_ords)
-                            #abc = 1
-                        try:
-                            if 'PERPETUAL' not in fut or self.perpbuy < 2:
-                                bought = False
-                                if self.arbmult[fut]['arb'] > 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5 * 1:
-                                    self.client.buy( fut, qty, prc, 'true' )
-                                    if 'PERPETUAL' in fut:
-                                        bought = True
-
-
-                                if self.arbmult[fut]['arb'] < 1 and  positionSize - qty /  2<= self.maxqty * 2.5 * 5 * 1:
-                                    self.client.buy(  fut, qty, prc, 'true' )
-                                    if 'PERPETUAL' in fut:
-                                        bought = True
-                                if self.arbmult[fut]['arb'] == 1 and positionSize - qty /  2<= self.maxqty * 2.5 * 5 * 1:
-                                    self.client.buy( fut, qty, prc, 'true' )
-                                    if 'PERPETUAL' in fut:
-                                        bought = True
-                                if 'PERPETUAL' in fut and bought == True:
-                                    self.perpbuy = self.perpbuy + 1
-
-
-                                
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except Exception as e:
-                            i
+                                i = 1
+                except Exception as e:
+                    print(e)
                 # OFFERS
                 print('place_asks')
                 print(place_asks)
                 print('nasks')
                 print(nasks)
-                
+                try:
 
-                if place_asks and i < nasks:
+                    if place_asks and i < nasks:
 
-                    if i > 0 and len(asks) > i:
-                        prc = ticksize_ceil( max( asks[ i ], asks[ i - 1 ] + tsz ), tsz )
-                    else:
-                        prc = asks[ 0 ]
-                        
-                    if self.defaultqty == None:
-                       self.defaultqty = round( prc * qtybtc / (con_sz / 1) ) 
-                    qty = self.defaultqty
-                    print('qty qty')
-                      
-                    print(qty)
-                    print(qty)
-                    print(qty)
-                    print(qty)
-                    if 4 in self.quantity_switch:
-                        if self.diffdeltab[fut] > 0 or self.diffdeltab[fut] < 0:
-                            qty = round(qty / (self.diffdeltab[fut])) 
-                    print(qty)
-                    if 2 in self.quantity_switch:
-                        qty = round ( qty / self.buysellsignal[fut])    
-                    print(qty)
-                    if 3 in self.quantity_switch:
-                        qty = round (qty * self.multsShort[fut]) 
-                        print(qty)
-                        print(qty)
-                        print(qty)
-                        print(qty)
-                    print(qty)
-                    if 1 in self.quantity_switch:
-                        qty = round (qty / self.diff)
-                    print(qty)    
-                    if qty < 0:
-                        qty = qty * -1    
-
-                    positionSize = 0
-                    for p in self.positions:
-                        positionSize = positionSize + self.positions[p]['size']
-
-                    gogo = True
-                    p1 = self.predict_1
-                    p5 = self.predict_5
-                    if p1 < 0.2:
-                        p1 = 0.2
-                    if p5 < 0.2:
-                        p5 = 0.2
-                    if fut == 'BTC-26JUN20':
-                        print(' ')
-                        print('predict_1: ' + str(p1) + ' & predict_5: ' + str(p5))
-                        print('qty of perp to sell before predictions: ' + str(qty))
-                    #qty = round(qty * (1/(math.sqrt(p1)*math.sqrt(p5))) / 2)
-                        
-                    if qty < 0:
-                        qty = qty * -1
-                    if qty < 1:
-                        qty = 1
-                    if qty * 10 > self.maxqty:
-                        self.maxqty = qty 
-                        print('---')
-                        print('self maxqty' + str(self.maxqty))
-                    qtyold = qty
-
-                    positionSize = 0
-                    for p in self.positions:
-                        positionSize = positionSize + self.positions[p]['size']
-                    if self.positionGains[fut] == True  and self.positions[fut]['size'] < 0 and positionSize > 0:
-                        qty = qty * 1.55
-                    
-                    if qty < 1:
-                        qty = 1
-                    
-                    if positionSize > 0:
-                        #len(self.futures)
-                        
-                        pps = 0
-                        for p in self.positions:
-                            pps = pps + self.positions[p]['size']
-                        if pps  < 0:
-                            ps = pps * -1
+                        if i > 0 and len(asks) > i:
+                            prc = ticksize_ceil( max( asks[ i ], asks[ i - 1 ] + tsz ), tsz )
                         else:
-                            ps = pps
+                            prc = asks[ 0 ]
+                            
+                        if self.defaultqty == None:
+                           self.defaultqty = round( prc * qtybtc / (con_sz / 1) ) 
+                        qty = self.defaultqty
+                        print('qty qty')
+                          
+                        print(qty)
+                        print(qty)
+                        print(qty)
+                        print(qty)
+                        if 4 in self.quantity_switch:
+                            if self.diffdeltab[fut] > 0 or self.diffdeltab[fut] < 0:
+                                qty = round(qty / (self.diffdeltab[fut])) 
+                        print(qty)
+                        if 2 in self.quantity_switch:
+                            qty = round ( qty / self.buysellsignal[fut])    
+                        print(qty)
+                        if 3 in self.quantity_switch:
+                            qty = round (qty * self.multsShort[fut]) 
+                            print(qty)
+                            print(qty)
+                            print(qty)
+                            print(qty)
+                        print(qty)
+                        if 1 in self.quantity_switch:
+                            qty = round (qty / self.diff)
+                        print(qty)    
+                        if qty < 0:
+                            qty = qty * -1    
 
-                        ps = ps / len(self.futures) / 2 / 2
+                        positionSize = 0
+                        for p in self.positions:
+                            positionSize = positionSize + self.positions[p]['size']
 
-                        ps = ps * 2
-                        if ps < 1:
-                            ps = 1
-                        if ps  > (self.maxqty * 2.5 * 5 * 1 * 1) / len(self.futures) / 2:
-                            qty = ps
+                        gogo = True
+                        p1 = self.predict_1
+                        p5 = self.predict_5
+                        if p1 < 0.2:
+                            p1 = 0.2
+                        if p5 < 0.2:
+                            p5 = 0.2
+                        if fut == 'BTC-26JUN20':
+                            print(' ')
+                            print('predict_1: ' + str(p1) + ' & predict_5: ' + str(p5))
+                            print('qty of perp to sell before predictions: ' + str(qty))
+                        #qty = round(qty * (1/(math.sqrt(p1)*math.sqrt(p5))) / 2)
+                            
+                        if qty < 0:
+                            qty = qty * -1
+                        if qty < 1:
+                            qty = 1
+                        if qty * 10 > self.maxqty:
+                            self.maxqty = qty 
+                            print('---')
+                            print('self maxqty' + str(self.maxqty))
+                        qtyold = qty
 
-                    if self.positions[fut]['size'] > 0:
-                        qty = qty * 1.5
-                    qty = int(qty)
-                    #print('pos size: ' + str(positionSize))
-
-                    if positionSize < 0:
-
-
-                        print((qty * MAX_LAYERS) / 2 + positionSize * -1)
-                        if (((qty * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty * 2.5 * 5 * 1)) and self.positions[fut]['size'] < 0:
-                            print('max skew on sell')
-                            try:
-                                oid = ask_ords[ i ][ 'orderId' ]
-                                cancel_oids.append( oid )
-                            except:
-                                abc123 = 1
-                                
-                            gogo = False
-                        if (((qty * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty * 2 * 1.25 * 5 * 1)) and self.positions[fut]['size'] > 0:
-                            print('max skew on sell')
-                            try:
-                                oid = ask_ords[ i ][ 'orderId' ]
-                                cancel_oids.append( oid )
-                            except:
-                                abc123 = 1
-                                
-                            gogo = False
-                    if  self.imbuying[fut] == True:
-                        print(fut + ' fut true fut btc perp gogo false selling')
-                        gogo = False
-
-                    if i <= len_ask_ords and gogo == True: 
+                        positionSize = 0
+                        for p in self.positions:
+                            positionSize = positionSize + self.positions[p]['size']
+                        if self.positionGains[fut] == True  and self.positions[fut]['size'] < 0 and positionSize > 0:
+                            qty = qty * 1.55
                         
-                        try:
-                            oid = ask_ords[ i ][ 'orderId' ]
-                            self.client.edit( oid, qty, prc )
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except:
-                            try:
-                                if place_asks and i < nasks:
-                                    if 'PERPETUAL' not in fut or self.perpsell < 2:
-                                        sold = False
-                                        if self.arbmult[fut]['arb'] == 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * 1 * -1:
-                                            self.client.sell(  fut, qty, prc, 'true' )
-                                            if 'PERPETUAL' in fut:
-                                                sold = True
-                                        if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2>=  self.maxqty * 2.5 * 5 * 1 * -1:
-                                            self.client.sell( fut, qty, prc, 'true' )
-                                            if 'PERPETUAL' in fut:
-                                                sold = True
-                                            
-                                        if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * 1 * -1:
-                                            self.client.sell(  fut, qty, prc, 'true' )
-                                            if 'PERPETUAL' in fut:
-                                                sold = True
+                        if qty < 1:
+                            qty = 1
+                        
+                        if positionSize > 0:
+                            #len(self.futures)
+                            
+                            pps = 0
+                            for p in self.positions:
+                                pps = pps + self.positions[p]['size']
+                            if pps  < 0:
+                                ps = pps * -1
+                            else:
+                                ps = pps
+
+                            ps = ps / len(self.futures) / 2 / 2
+
+                            ps = ps * 2
+                            if ps < 1:
+                                ps = 1
+                            if ps  > (self.maxqty * 2.5 * 5 * 1 * 1) / len(self.futures) / 2:
+                                qty = ps
+
+                        if self.positions[fut]['size'] > 0:
+                            qty = qty * 1.5
+                        qty = int(qty)
+                        #print('pos size: ' + str(positionSize))
+
+                        if positionSize < 0:
+
+
+                            print((qty * MAX_LAYERS) / 2 + positionSize * -1)
+                            if (((qty * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty * 2.5 * 5 * 1)) and self.positions[fut]['size'] < 0:
+                                print('max skew on sell')
+                                try:
+                                    oid = ask_ords[ i ][ 'orderId' ]
+                                    cancel_oids.append( oid )
+                                except:
+                                    abc123 = 1
                                     
-                                        if 'PERPETUAL' in fut and sold == True:
-                                            self.perpsell = self.perpsell + 1
+                                gogo = False
+                            if (((qty * MAX_LAYERS) / 2 + positionSize * -1 > MAX_SKEW * 2) or (ULTRACONSERVATIVE == True and (qty * MAX_LAYERS) / 2 + positionSize * -1 > self.maxqty * 2 * 1.25 * 5 * 1)) and self.positions[fut]['size'] > 0:
+                                print('max skew on sell')
+                                try:
+                                    oid = ask_ords[ i ][ 'orderId' ]
+                                    cancel_oids.append( oid )
+                                except:
+                                    abc123 = 1
+                                    
+                                gogo = False
+                        if  self.imbuying[fut] == True:
+                            print(fut + ' fut true fut btc perp gogo false selling')
+                            gogo = False
 
-
-                                #cancel_oids.append( oid )
-                                #self.logger.warn( 'Sell Edit failed for %s' % oid )
+                        if i <= len_ask_ords and gogo == True: 
+                            
+                            try:
+                                oid = ask_ords[ i ][ 'orderId' ]
+                                self.client.edit( oid, qty, prc )
                             except (SystemExit, KeyboardInterrupt):
                                 raise
-                            except Exception as e:
-                                 abcd1234 = 1
-                    elif gogo == True:
-                        
-                        #try:
-                            #oid = ask_ords[ i ][ 'orderId' ]
-                            #self.client.edit( oid, qty, prc )
-                        #except:
-                            #print('edit error')
-                            #abc = 1
-                        try:
-                            if 'PERPETUAL' not in fut or self.perpsell < 2:
-                                sold = False
-                                if self.arbmult[fut]['arb'] == 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * 1 * -1:
-                                    self.client.sell(  fut, qty, prc, 'true' )
-                                    if 'PERPETUAL' in fut:
-                                        sold = True
-                                if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2>=  self.maxqty * 2.5 * 5 * 1 * -1:
-                                    self.client.sell( fut, qty, prc, 'true' )
-                                    if 'PERPETUAL' in fut:
-                                        sold = True
-                                    
-                                if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * 1 * -1:
-                                    self.client.sell(  fut, qty, prc, 'true' )
-                                    if 'PERPETUAL' in fut:
-                                        sold = True
-                            
-                                if 'PERPETUAL' in fut and sold == True:
-                                    self.perpsell = self.perpsell + 1
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
+                            except:
+                                try:
+                                    if place_asks and i < nasks:
+                                        if 'PERPETUAL' not in fut or self.perpsell < 2:
+                                            sold = False
+                                            if self.arbmult[fut]['arb'] == 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * 1 * -1:
+                                                self.client.sell(  fut, qty, prc, 'true' )
+                                                if 'PERPETUAL' in fut:
+                                                    sold = True
+                                            if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2>=  self.maxqty * 2.5 * 5 * 1 * -1:
+                                                self.client.sell( fut, qty, prc, 'true' )
+                                                if 'PERPETUAL' in fut:
+                                                    sold = True
+                                                
+                                            if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * 1 * -1:
+                                                self.client.sell(  fut, qty, prc, 'true' )
+                                                if 'PERPETUAL' in fut:
+                                                    sold = True
+                                        
+                                            if 'PERPETUAL' in fut and sold == True:
+                                                self.perpsell = self.perpsell + 1
 
+
+                                    #cancel_oids.append( oid )
+                                    #self.logger.warn( 'Sell Edit failed for %s' % oid )
+                                except (SystemExit, KeyboardInterrupt):
+                                    raise
+                                except Exception as e:
+                                     abcd1234 = 1
+                        elif gogo == True:
+                            
+                            #try:
+                                #oid = ask_ords[ i ][ 'orderId' ]
+                                #self.client.edit( oid, qty, prc )
+                            #except:
+                                #print('edit error')
+                                #abc = 1
+                            try:
+                                if 'PERPETUAL' not in fut or self.perpsell < 2:
+                                    sold = False
+                                    if self.arbmult[fut]['arb'] == 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * 1 * -1:
+                                        self.client.sell(  fut, qty, prc, 'true' )
+                                        if 'PERPETUAL' in fut:
+                                            sold = True
+                                    if self.arbmult[fut]['arb'] >= 1 and positionSize + qty / 2>=  self.maxqty * 2.5 * 5 * 1 * -1:
+                                        self.client.sell( fut, qty, prc, 'true' )
+                                        if 'PERPETUAL' in fut:
+                                            sold = True
+                                        
+                                    if self.arbmult[fut]['arb'] <= 1 and positionSize + qty / 2>= self.maxqty * 2.5 * 5 * 1 * -1:
+                                        self.client.sell(  fut, qty, prc, 'true' )
+                                        if 'PERPETUAL' in fut:
+                                            sold = True
+                                
+                                    if 'PERPETUAL' in fut and sold == True:
+                                        self.perpsell = self.perpsell + 1
+                            except (SystemExit, KeyboardInterrupt):
+                                raise
+                except Exception as e:
+                    print(e)
             if nbids < len( bid_ords ):
                 cancel_oids += [ o[ 'orderId' ] for o in bid_ords[ nbids : ]]
             if nasks < len( ask_ords ):
