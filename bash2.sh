@@ -4,7 +4,7 @@
 ## example 1: checking if "python3" is running
 while :
 do
-OUTPUT=$(ps -aux | grep -cE "python3")
+OUTPUT=$(ps -aux | grep -cE "python3 /deribitBitmexMarketMaker_ByFunding_private/real_poc_from_env_master.py")
 
 if (( OUTPUT > 1 )); then
     echo "python3 is running"
