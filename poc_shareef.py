@@ -1574,7 +1574,7 @@ class MarketMaker( object ):
 
             asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
         else:
-            bid0    =   bbo['bio']
+            bid0    =   bbo['bid']
             bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
          
 
