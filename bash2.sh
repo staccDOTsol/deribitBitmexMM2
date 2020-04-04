@@ -12,7 +12,7 @@ if (( OUTPUT > 1 )); then
 else
     echo "python3 is not running"
 	
-    sudo nohup python3 /deribitBitmexMarketMaker_ByFunding_private/real_poc_from_env_master.py &
+    nohup python3 /deribitBitmexMarketMaker_ByFunding_private/real_poc_from_env_master.py &
 fi
 
 

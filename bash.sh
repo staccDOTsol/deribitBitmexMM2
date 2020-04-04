@@ -2,6 +2,6 @@
 while :
 do
 sudo killall python3
-sudo nohup python3 "real_poc_from_env_master.py" &
+nohup python3 /deribitBitmexMarketMaker_ByFunding_private/real_poc_from_env_master.py &
 sleep 60m
 done
