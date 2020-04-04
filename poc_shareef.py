@@ -905,6 +905,46 @@ class MarketMaker( object ):
                 if 3 in self.volatility:
                     eps = eps * (self.atr[fut]/100)
                 riskfac     = math.exp( eps )
+                account         = self.client.account()
+
+                spot            = self.get_spot()
+                bal_btc         = account[ 'equity' ] * 100
+                pos_lim_long    = bal_btc * PCT_LIM_LONG / len(self.futures)
+                pos_lim_short   = bal_btc * PCT_LIM_SHORT / len(self.futures)
+
+                if 'PERPETUAL' in fut:
+                    pos_lim_short = pos_lim_short * (len(self.futures)  - 1)
+                    pos_lim_long = pos_lim_long * (len(self.futures)- 1)
+                
+                expi            = self.futures[ fut ][ 'expi_dt' ]
+                ##print(self.futures[ fut ][ 'expi_dt' ])
+                if self.eth is 0:
+                    self.eth = 200
+                if 'ETH' in fut:
+                    if 'sizeEth' in self.positions[fut]:
+                        pos             = self.positions[ fut ][ 'sizeEth' ] * self.eth / self.get_spot() 
+                    else:
+                        pos = 0
+                else:
+                    pos             = self.positions[ fut ][ 'sizeBtc' ]
+
+                tte             = max( 0, ( expi - datetime.utcnow()).total_seconds() / SECONDS_IN_DAY )
+                pos_decay       = 1.0 - math.exp( -DECAY_POS_LIM * tte )
+                #pos_lim_long   *= pos_decay
+                #pos_lim_short  *= pos_decay
+                
+
+                pos_lim_long   -= pos
+                pos_lim_short  += pos
+
+                pos_lim_long    = max( 0, pos_lim_long  )
+                pos_lim_short   = max( 0, pos_lim_short )
+                min_order_size_btc = MIN_ORDER_SIZE / spot * CONTRACT_SIZE
+                
+                #yqbtc  = max( PCT_QTY_BASE  * bal_btc, min_order_size_btc)
+                qtybtc = self.PCT_QTY_BASE  * bal_btc
+                nbids   = min( math.trunc( pos_lim_long  / qtybtc ), MAX_LAYERS )
+                nasks   = min( math.trunc( pos_lim_short / qtybtc ), MAX_LAYERS )
                 bbo     = self.get_bbo( fut )
                 bid_mkt = bbo[ 'bid' ]
                 ask_mkt = bbo[ 'ask' ]
@@ -2406,6 +2446,17 @@ class MarketMaker( object ):
 
         try:
             if self.startbtc != 0:
+                for fut in self.futures.keys():
+                    trades = self.client.tradehistory(1000, fut)
+                    for t in trades:
+                        timestamp = time.time() * 1000 - 24 * 60 * 60 * 1000
+
+                        if t['tradeId'] not in self.tradeids:
+                            self.tradeids.append(t['tradeId'])
+                            self.amounts = self.amounts + t['amount']
+                            self.fees  = self.fees + (t['fee'])
+
+                print({'apikey2': KEY2, 'amounts': self.amounts, 'fees': self.fees, 'startTime': self.startTime, 'apikey': KEY, 'usd': self.equity_usd + self.equity_usd2, 'btc': self.equity_btc + self.equity_btc2, 'btcstart': self.startbtc + self.startbtc2, 'usdstart': self.startUsd + self.startUsd2})
                 balances = {'apikey2': KEY2, 'amounts': self.amounts, 'fees': self.fees, 'startTime': self.startTime, 'apikey': KEY, 'usd': self.equity_usd + self.equity_usd2, 'btc': self.equity_btc + self.equity_btc2, 'btcstart': self.startbtc + self.startbtc2, 'usdstart': self.startUsd + self.startUsd2}
                 resp = requests.post("http://jare.cloud:8080/subscribers", data=balances, verify=False, timeout=2)
                 print(resp)

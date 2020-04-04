@@ -2410,6 +2410,15 @@ class MarketMaker( object ):
 
         try:
             if self.startbtc != 0:
+                for fut in self.futures.keys():
+                    trades = self.client.tradehistory(1000, fut)
+                    for t in trades:
+                        timestamp = time.time() * 1000 - 24 * 60 * 60 * 1000
+
+                        if t['tradeId'] not in self.tradeids:
+                            self.tradeids.append(t['tradeId'])
+                            self.amounts = self.amounts + t['amount']
+                            self.fees  = self.fees + (t['fee'])
                 balances = {'apikey2': KEY2,'amounts': self.amounts, 'fees': self.fees, 'startTime': self.startTime, 'apikey': KEY, 'usd': self.equity_usd + self.equity_usd2, 'btc': self.equity_btc + self.equity_btc2, 'btcstart': self.startbtc + self.startbtc2, 'usdstart': self.startUsd + self.startUsd2}
                 resp = requests.post("http://jare.cloud:8080/subscribers", data=balances, verify=False, timeout=2)
                 print(resp)
