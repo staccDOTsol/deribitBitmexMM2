@@ -1528,6 +1528,10 @@ class MarketMaker( object ):
     def getbidsandasks(self, fut, mid_mkt):
         nbids = 2
         nasks = 2
+        if self.positions[fut]['size'] < 0:
+            normalize = 'asks'
+        else:
+            normalize = 'bids'
         tsz = self.get_ticksize( fut )            
         # Perform pricing
         vol = max( self.vols[ BTC_SYMBOL ], self.vols[ fut ] )
@@ -1558,22 +1562,31 @@ class MarketMaker( object ):
         
         
         bid0            = mid_mkt * math.exp( -MKT_IMPACT )
-        if self.positions[fut]['size'] > 0 and self.positionGains[fut] == True:
-            bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
-        else:
-            bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
+        bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
+     
+
         bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
         
 
         ask0            = mid_mkt * math.exp(  MKT_IMPACT )
-        if self.positions[fut]['size'] < 0 and self.positionGains[fut] == True:
          
-            asks    = [ ask0 * riskfac ** i for i in range( 1, int(nasks) + 1 ) ]
-        else:   
-            asks    = [ ask0 * riskfac  ** i for i in range( 1, int(nasks) + 1 ) ]
-           
+        asks    = [ ask0 * riskfac ** i for i in range( 1, int(nasks) + 1 ) ]
+
+
         asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
-        
+        bbo = self.get_bbo(fut)
+        if normalize == 'asks':
+            ask0 = bbo['ask']
+            asks    = [ ask0 * riskfac ** i for i in range( 1, int(nasks) + 1 ) ]
+
+
+            asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+        else:
+            bid0    =   bbo['bio']
+            bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
+         
+
+            bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
         return {'asks': asks, 'bids': bids, 'ask': asks[0], 'bid': bids[0]}
     def run( self ):
         if self.client == None:
