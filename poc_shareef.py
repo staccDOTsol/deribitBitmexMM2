@@ -79,8 +79,8 @@ skews = []
 
 KEY2 = "5HkSPCwo"
 SECRET2 = "z5fHc3FFB_SrVmEK6z0Unc-CjtHVU9_5pNMCdbXw_K0"
-KEY     = "VC4d7Pj1"
-SECRET  = "IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
+KEY     = "7x5cttEC"#"VC4d7Pj1"
+SECRET  = "h_xxD-huOZOyNWouHh_yQnRyMkKyQyUv-EX96ReUHmM"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
 
 ULTRACONSERVATIVE = True
 BP                  = 1e-4      # one basis point
@@ -97,8 +97,8 @@ MAX_LAYERS          =  2# max orders to layer the ob with on each side
 MKT_IMPACT          =  0      # base 1-sided spread between bid/offer
 NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
-PCT_LIM_LONG        = 40      # % position limit long
-PCT_LIM_SHORT       = 40 # % position limit short
+PCT_LIM_LONG        = 20      # % position limit long
+PCT_LIM_SHORT       = 20 # % position limit short
 
 MIN_LOOP_TIME       =  0.25      # Minimum time between loops
 RISK_CHARGE_VOL     =   85*16  # vol risk charge in bps per 100 vol
@@ -372,7 +372,7 @@ class MarketMaker( object ):
         self.futures        = sort_by_key( { 
             i[ 'instrumentName' ]: i for i in insts  if 'BTC-27MAR20' not in i['instrumentName'] and ('BTC-' in i['instrumentName'])  and i[ 'kind' ] == 'future'#  
         } )
-        
+        print(self.futures)
         for k, v in self.futures.items():
             self.futures[ k ][ 'expi_dt' ] = datetime.strptime( 
                                                 v[ 'expiration' ][ : -4 ], 
@@ -792,7 +792,77 @@ class MarketMaker( object ):
                 print('eps after predictions: ' + str(eps))
                 print(' ')
             riskfac     = math.exp( eps )
+            account         = self.client.account()
 
+            spot            = self.get_spot()
+            bal_btc         = account[ 'equity' ] * 100
+            pos_lim_long    = (bal_btc * PCT_LIM_LONG * 0.75) / len(self.futures)
+            pos_lim_short   = (bal_btc * PCT_LIM_SHORT * 0.75) / len(self.futures)
+
+            if 'PERPETUAL' in fut:
+                pos_lim_short = pos_lim_short * (len(self.futures)  - 1)
+                pos_lim_long = pos_lim_long * (len(self.futures)- 1)
+            
+            expi            = self.futures[ fut ][ 'expi_dt' ]
+            ##print(self.futures[ fut ][ 'expi_dt' ])
+            if self.eth is 0:
+                self.eth = 200
+            if 'ETH' in fut:
+                if 'sizeEth' in self.positions[fut]:
+                    pos             = self.positions[ fut ][ 'sizeEth' ] * self.eth / self.get_spot() 
+                else:
+                    pos = 0
+            else:
+                pos             = self.positions[ fut ][ 'sizeBtc' ]
+
+            tte             = max( 0, ( expi - datetime.utcnow()).total_seconds() / SECONDS_IN_DAY )
+            pos_decay       = 1.0 - math.exp( -DECAY_POS_LIM * tte )
+            #pos_lim_long   *= pos_decay
+            #pos_lim_short  *= pos_decay
+            
+
+            pos_lim_long   -= pos
+            pos_lim_short  += pos
+
+            pos_lim_long    = max( 0, pos_lim_long  )
+            pos_lim_short   = max( 0, pos_lim_short )
+
+            min_order_size_btc = MIN_ORDER_SIZE / spot * CONTRACT_SIZE
+            
+            #yqbtc  = max( PCT_QTY_BASE  * bal_btc, min_order_size_btc)
+            qtybtc = self.PCT_QTY_BASE  * bal_btc
+            nbids   = min( math.trunc( pos_lim_long  / qtybtc ), MAX_LAYERS )
+            nasks   = min( math.trunc( pos_lim_short / qtybtc ), MAX_LAYERS )
+            if nbids == 0:
+                try:
+                    sleep(0.01)
+
+                    bbo     = self.get_bbo( fut )
+                    bid_mkt = bbo[ 'bid' ]
+                    ask_mkt = bbo[ 'ask' ]
+                    try:
+                        asks[0] = ask_mkt
+                    except:
+                        asks = []
+                        asks.append(ask_mkt)
+                        nasks = 1
+                except Exception as e:
+                    print(e)
+            if nasks == 0:
+                try:
+                    sleep(0.01)
+
+                    bbo     = self.get_bbo( fut )
+                    bid_mkt = bbo[ 'bid' ]
+                    ask_mkt = bbo[ 'ask' ]
+                    try:
+                        bids[0] = bid_mkt
+                    except:
+                        bids = []
+                        bids.append(bid_mkt)
+                        nbids = 1
+                except Exception as e:
+                    print(e)   
             if self.positionGains[fut] == True:
                 account         = self.client.account()
 
@@ -833,8 +903,8 @@ class MarketMaker( object ):
                 
                 #yqbtc  = max( PCT_QTY_BASE  * bal_btc, min_order_size_btc)
                 qtybtc = self.PCT_QTY_BASE  * bal_btc
-                nbids   = min( math.trunc( pos_lim_long  / qtybtc ), MAX_LAYERS )
-                nasks   = min( math.trunc( pos_lim_short / qtybtc ), MAX_LAYERS )
+                nbids   = nbids + min( math.trunc( pos_lim_long  / qtybtc ), MAX_LAYERS )
+                nasks   = nasks + min( math.trunc( pos_lim_short / qtybtc ), MAX_LAYERS )
                 positionSize = 0
                 for p in self.positions:
                     positionSize = positionSize + int(self.positions[p]['size'])
@@ -1006,8 +1076,8 @@ class MarketMaker( object ):
                 
                 #yqbtc  = max( PCT_QTY_BASE  * bal_btc, min_order_size_btc)
                 qtybtc = self.PCT_QTY_BASE  * bal_btc
-                nbids   = min( math.trunc( pos_lim_long  / qtybtc ), MAX_LAYERS )
-                nasks   = min( math.trunc( pos_lim_short / qtybtc ), MAX_LAYERS )
+                nbids   = nbids + min( math.trunc( pos_lim_long  / qtybtc ), MAX_LAYERS )
+                nasks   = nasks + min( math.trunc( pos_lim_short / qtybtc ), MAX_LAYERS )
                 positionSize = 0
                 for p in self.positions:
                     positionSize = positionSize + int(self.positions[p]['size'])
@@ -1090,40 +1160,7 @@ class MarketMaker( object ):
             print(bids)
             print(' ')
             print( ' ')
-            sell20 = False
-            buy20 = False
-            if nbids == 0:
-                try:
-                    sleep(0.01)
 
-                    bbo     = self.get_bbo( fut )
-                    bid_mkt = bbo[ 'bid' ]
-                    ask_mkt = bbo[ 'ask' ]
-                    sell20 = True
-                    try:
-                        asks[0] = ask_mkt
-                    except:
-                        asks = []
-                        asks.append(ask_mkt)
-                        nasks = 1
-                except Exception as e:
-                    print(e)
-            if nasks == 0:
-                try:
-                    sleep(0.01)
-
-                    bbo     = self.get_bbo( fut )
-                    bid_mkt = bbo[ 'bid' ]
-                    ask_mkt = bbo[ 'ask' ]
-                    buy20 = True
-                    try:
-                        bids[0] = bid_mkt
-                    except:
-                        bids = []
-                        bids.append(bid_mkt)
-                        nbids = 1
-                except Exception as e:
-                    print(e)   
             len_bid_ords = min( len( bid_ords ), nbids ) 
             len_ask_ords    = min( len( ask_ords ), nasks )
             place_bids= len(bids) > 0
@@ -1241,8 +1278,6 @@ class MarketMaker( object ):
                                 qty = ps
                         if self.positions[fut]['size'] < 0:
                             qty = qty * 1.5   
-                        if buy20 == True:
-                            qty = int(self.positions[fut]['size'] / 20)     
                         qty = int(qty)
                         if positionSize > 0:
                             print((qty * MAX_LAYERS) / 2 + positionSize)
@@ -1451,8 +1486,6 @@ class MarketMaker( object ):
 
                         if self.positions[fut]['size'] > 0:
                             qty = qty * 1.5
-                        if sell20 == True:
-                            qty = int(self.positions[fut]['size'] / 20)
                         qty = int(qty)
                         #print('pos size: ' + str(positionSize))
 
