@@ -1070,7 +1070,40 @@ class MarketMaker( object ):
             asks = newasks
 
             bids = newbids
-           
+            sell20 = False
+            buy20 = False
+            if nbids == 0:
+                try:
+                    sleep(0.01)
+
+                    bbo     = self.get_bbo( fut )
+                    bid_mkt = bbo[ 'bid' ]
+                    ask_mkt = bbo[ 'ask' ]
+                    sell20 = True
+                    try:
+                        asks[0] = ask_mkt
+                    except:
+                        asks = []
+                        asks.append(ask_mkt)
+                        nasks = 1
+                except Exception as e:
+                    print(e)
+            if nasks == 0:
+                try:
+                    sleep(0.01)
+
+                    bbo     = self.get_bbo( fut )
+                    bid_mkt = bbo[ 'bid' ]
+                    ask_mkt = bbo[ 'ask' ]
+                    buy20 = True
+                    try:
+                        bids[0] = bid_mkt
+                    except:
+                        bids = []
+                        bids.append(bid_mkt)
+                        nbids = 1
+                except Exception as e:
+                    print(e)   
             len_bid_ords = min( len( bid_ords ), nbids ) 
             len_ask_ords    = min( len( ask_ords ), nasks )
 
@@ -1188,6 +1221,8 @@ class MarketMaker( object ):
                                 qty = ps
                         if self.positions[fut]['size'] < 0:
                             qty = qty * 1.5 
+                        if buy20 == True:
+                            qty = int(self.positions[fut]['size'] / 20)  
                         qty = int(qty)
                         if positionSize > 0:
                             print((qty * MAX_LAYERS) / 2 + positionSize)
@@ -1406,6 +1441,8 @@ class MarketMaker( object ):
 
                         if self.positions[fut]['size'] > 0:
                             qty = qty * 1.5 
+                        if sell20 == True:
+                            qty = int(self.positions[fut]['size'] / 20)  
                         qty = int(qty)
                         #print('pos size: ' + str(positionSize))
 

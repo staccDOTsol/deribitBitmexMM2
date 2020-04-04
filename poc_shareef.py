@@ -729,30 +729,7 @@ class MarketMaker( object ):
             print(pos_lim_long)
             nbids   = min( math.trunc( pos_lim_long  / qtybtc ), MAX_LAYERS )
             nasks   = min( math.trunc( pos_lim_short / qtybtc ), MAX_LAYERS )
-            if nbids == 0:
-                self.client.cancelall()
-                try:
-                    sleep(0.01)
-
-                    bbo     = self.get_bbo( fut )
-                    bid_mkt = bbo[ 'bid' ]
-                    ask_mkt = bbo[ 'ask' ]
-                    mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
-                    self.client.sell(  fut, int(self.positions[fut]['size'] / 20), mid * 0.98, 'false' )
-                except Exception as e:
-                    print(e)
-            if nasks == 0:
-                self.client.cancelall()
-                try:
-                    sleep(0.01)
-
-                    bbo     = self.get_bbo( fut )
-                    bid_mkt = bbo[ 'bid' ]
-                    ask_mkt = bbo[ 'ask' ]
-                    mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
-                    self.client.buy(  fut, int(self.positions[fut]['size'] * -1 / 20), mid * 1.02, 'false' )
-                except Exception as e:
-                    print(e)
+            
             positionSize = 0
             for p in self.positions:
                 positionSize = positionSize + int(self.positions[p]['size'])
@@ -983,6 +960,7 @@ class MarketMaker( object ):
 
 
                     asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+            
                 
             else:
                 for p in self.client.positions():
@@ -1112,6 +1090,40 @@ class MarketMaker( object ):
             print(bids)
             print(' ')
             print( ' ')
+            sell20 = False
+            buy20 = False
+            if nbids == 0:
+                try:
+                    sleep(0.01)
+
+                    bbo     = self.get_bbo( fut )
+                    bid_mkt = bbo[ 'bid' ]
+                    ask_mkt = bbo[ 'ask' ]
+                    sell20 = True
+                    try:
+                        asks[0] = ask_mkt
+                    except:
+                        asks = []
+                        asks.append(ask_mkt)
+                        nasks = 1
+                except Exception as e:
+                    print(e)
+            if nasks == 0:
+                try:
+                    sleep(0.01)
+
+                    bbo     = self.get_bbo( fut )
+                    bid_mkt = bbo[ 'bid' ]
+                    ask_mkt = bbo[ 'ask' ]
+                    buy20 = True
+                    try:
+                        bids[0] = bid_mkt
+                    except:
+                        bids = []
+                        bids.append(bid_mkt)
+                        nbids = 1
+                except Exception as e:
+                    print(e)   
             len_bid_ords = min( len( bid_ords ), nbids ) 
             len_ask_ords    = min( len( ask_ords ), nasks )
             place_bids= len(bids) > 0
@@ -1139,6 +1151,7 @@ class MarketMaker( object ):
                         if self.defaultqty == None:
                            self.defaultqty = round( prc * qtybtc / (con_sz / 1) ) 
                         qty = self.defaultqty
+
                         print('qty qty')
                         print(qty)
                         if 4 in self.quantity_switch:
@@ -1227,7 +1240,9 @@ class MarketMaker( object ):
                             if ps > (self.maxqty * 2.5 * 5 * 1 * 1) / len(self.futures) / 2:
                                 qty = ps
                         if self.positions[fut]['size'] < 0:
-                            qty = qty * 1.5        
+                            qty = qty * 1.5   
+                        if buy20 == True:
+                            qty = int(self.positions[fut]['size'] / 20)     
                         qty = int(qty)
                         if positionSize > 0:
                             print((qty * MAX_LAYERS) / 2 + positionSize)
@@ -1436,6 +1451,8 @@ class MarketMaker( object ):
 
                         if self.positions[fut]['size'] > 0:
                             qty = qty * 1.5
+                        if sell20 == True:
+                            qty = int(self.positions[fut]['size'] / 20)
                         qty = int(qty)
                         #print('pos size: ' + str(positionSize))
 
