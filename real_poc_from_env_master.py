@@ -907,6 +907,7 @@ class MarketMaker( object ):
                     eps = eps * (1+self.bbw[fut])
                 if 3 in self.volatility:
                     eps = eps * (self.atr[fut]/100)
+                eps = eps * self.predict_1 * self.predict_5
                 riskfac     = math.exp( eps )
                 bbo     = self.get_bbo( fut )
                 bid_mkt = bbo[ 'bid' ]

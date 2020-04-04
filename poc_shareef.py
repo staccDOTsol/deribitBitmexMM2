@@ -807,6 +807,7 @@ class MarketMaker( object ):
                 eps = eps * (1+self.bbw[fut])
             if 3 in self.volatility:
                 eps = eps * (self.atr[fut]/100)
+            eps = eps * self.predict_1 * self.predict_5
             print('eps of perp before predictions: ' + str(eps))
             print(self.PCT_QTY_BASE)
             eps = eps * ((self.predict_1 * self.predict_5) * (self.predict_1 * self.predict_5))
