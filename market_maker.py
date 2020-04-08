@@ -332,11 +332,11 @@ class MarketMaker( object ):
             else:
                 skewDirection = 'supershort'
             if psize + skew_size > self.MAX_SKEW / 2:
-                    skewDirection = 'neutral'
-                elif psize + skew_size > self.MAX_SKEW :
-                    skewDirection = 'long'
-                else:
-                    skewDirection = 'superlong'
+                skewDirection = 'neutral'
+            elif psize + skew_size > self.MAX_SKEW :
+                skewDirection = 'long'
+            else:
+                skewDirection = 'superlong'
             if psize < 0:
                 psize = psize * -1
             account         = self.client.account()
