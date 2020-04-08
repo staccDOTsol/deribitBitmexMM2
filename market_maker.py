@@ -329,9 +329,9 @@ class MarketMaker( object ):
                 skewDirection = 'neutral'
             elif psize * -1 - skew_size < -1 * self.MAX_SKEW:
                 skewDirection = 'short'
-            else:
-                skewDirection = 'supershort'
-            if psize + skew_size > self.MAX_SKEW / 2:
+            elif psize * -1 - skew_size < -1 * self.MAX_SKEW * 2:
+                skewDirection = 'supershort'    
+            elif psize + skew_size > self.MAX_SKEW / 2:
                 skewDirection = 'neutral'
             elif psize + skew_size > self.MAX_SKEW :
                 skewDirection = 'long'
