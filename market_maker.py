@@ -567,7 +567,8 @@ class MarketMaker( object ):
 
             # # in profit, <50% pos & skew
             elif positionSkew == 'long' and ((skewDirection == 'short' or skewDirection == 'long') or  place_bids2 == True) and positionGains[fut] == True:
-                
+                nbids = 0
+                place_bids = False
                 bidMult = 0.5
                 askMult = 0.5
                 if place_bids:
@@ -898,7 +899,8 @@ class MarketMaker( object ):
                     ask_ords = []
             # # at a loss, 100% pos or skew
             elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_bids == False) and positionGains[fut] == False:
-                
+                nbids = 0
+                place_bids = 0
                 bidMult = 0.5
                 askMult = 0.5
                 if place_bids:
@@ -1328,8 +1330,8 @@ class MarketMaker( object ):
 
             # # in profit, 100% pos or skew
             elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_asks == False) and positionGains[fut] == True:
-                place_bids = 0
-                nbids = 0
+                place_asks = 0
+                nasks = 0
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -1358,7 +1360,8 @@ class MarketMaker( object ):
                     ask_ords = []
             # # at a loss, 100% pos or skew
             elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_asks == False) and positionGains[fut] == False:
-                
+                nasks = 0
+                place_asks = 0
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
