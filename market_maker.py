@@ -13,8 +13,8 @@ import argparse, logging, math, os, pathlib, sys, time, traceback
 try:
     from deribit_api    import RestClient
 except ImportError:
-    print("Please install the deribit_api pacakge", file=sys.stderr)
-    print("    pip3 install deribit_api", file=sys.stderr)
+    #print("Please install the deribit_api pacakge", file=sys.stderr)
+    #print("    pip3 install deribit_api", file=sys.stderr)
     exit(1)
 
 # Add command line switches
@@ -42,8 +42,8 @@ parser.add_argument( '--no-restart',
 
 args    = parser.parse_args()
 
-KEY     = "7x5cttEC"#"VC4d7Pj1"
-SECRET  = "h_xxD-huOZOyNWouHh_yQnRyMkKyQyUv-EX96ReUHmM"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
+KEY     = "Ef30Pt3-"#"VC4d7Pj1"
+SECRET  = "TdREcHubAr4cPh-WwifNI0Y1iGdq3YjedsO-8ct-Fhw"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
 URL     = 'https://www.deribit.com'
 
         
@@ -52,7 +52,7 @@ BTC_SYMBOL          = 'btc'
 CONTRACT_SIZE       = 10        # USD
 COV_RETURN_CAP      = 100       # cap on variance for vol estimate
 DECAY_POS_LIM       = 0.1       # position lim decay factor toward expiry
-EWMA_WGT_COV        = 4         # parameter in % points for EWMA volatility estimate
+EWMA_WGT_COV        = 60         # parameter in % points for EWMA volatility estimate
 EWMA_WGT_LOOPTIME   = 0.1       # parameter for EWMA looptime estimate
 FORECAST_RETURN_CAP = 20        # cap on returns for vol estimate
 LOG_LEVEL           = logging.INFO
@@ -61,12 +61,10 @@ MAX_LAYERS          =  2        # max orders to layer the ob with on each side
 MKT_IMPACT          =  0.5      # base 1-sided spread between bid/offer
 NLAGS               =  2        # number of lags in time series
 PCT                 = 100 * BP  # one percentage point
-PCT_LIM_LONG        = 100       # % position limit long
-MAX_SKEW = 1
-PCT_LIM_SHORT       = 100       # % position limit short
+
 PCT_QTY_BASE        = 100       # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =   0.2       # Minimum time between loops
-RISK_CHARGE_VOL     =   0.25    # vol risk charge in bps per 100 vol
+RISK_CHARGE_VOL     =  1	  # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
 WAVELEN_MTIME_CHK   = 15        # time in seconds between check for file change
@@ -76,8 +74,7 @@ VOL_PRIOR           = 100       # vol estimation starting level in percentage pt
 
 EWMA_WGT_COV        *= PCT
 MKT_IMPACT          *= BP
-PCT_LIM_LONG        *= PCT
-PCT_LIM_SHORT       *= PCT
+
 PCT_QTY_BASE        *= BP
 VOL_PRIOR           *= PCT
 
@@ -87,12 +84,25 @@ class MarketMaker( object ):
     def __init__( self, monitor = True, output = True ):
         self.predict_1 = 0.5
         self.predict_5 = 0.5
+        self.PCT_LIM_LONG        = 20       # % position limit long
+
+        self.PCT_LIM_SHORT       = 20       # % position limit short
+        self.MAX_SKEW = 1
+
         self.equity_usd         = None
         self.equity_btc         = None
         self.equity_usd_init    = None
         self.equity_btc_init    = None
         self.con_size           = float( CONTRACT_SIZE )
         self.client             = None
+        self.IM = 0
+        self.LEV = 0
+        self.tradeids = []
+        self.amounts = 0
+        self.fees = 0
+        self.startTime = int(time.time()*1000)
+        self.arbmult = {}
+
         self.deltas             = OrderedDict()
         self.futures            = OrderedDict()
         self.futures_prv        = OrderedDict()
@@ -110,6 +120,52 @@ class MarketMaker( object ):
     def create_client( self ):
         self.client = RestClient( KEY, SECRET, URL )
     
+    def getbidsandasks(self, fut, mid_mkt):
+        nbids = 2
+        nasks = 2
+        if self.positions[fut]['size'] < 0:
+            normalize = 'asks'
+        else:
+            normalize = 'bids'
+        tsz = self.get_ticksize( fut )            
+        # Perform pricing
+        vol = max( self.vols[ BTC_SYMBOL ], self.vols[ fut ] )
+        eps = BP * vol * (RISK_CHARGE_VOL * (((self.predict_1 + self.predict_5) / 2) + 1))
+
+        eps = eps * self.predict_1 * self.predict_5
+
+        riskfac     = math.exp( eps )
+                
+
+        
+        
+        bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+        bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
+     
+
+        bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+        
+
+        ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+         
+        asks    = [ ask0 * riskfac ** i for i in range( 1, int(nasks) + 1 ) ]
+
+
+        asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+        bbo = self.get_bbo(fut)
+        if normalize == 'asks':
+            ask0 = bbo['ask']
+            asks    = [ ask0 * riskfac ** i for i in range( 1, int(nasks) + 1 ) ]
+
+
+            asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+        else:
+            bid0    =   bbo['bid']
+            bids    = [ bid0 * riskfac ** -i for i in range( 1, int(nbids) + 1 ) ]
+         
+
+            bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+        return {'asks': asks, 'bids': bids, 'ask': asks[0], 'bid': bids[0]}
     
     def get_bbo( self, contract ): # Get best b/o excluding own orders
         
@@ -143,7 +199,6 @@ class MarketMaker( object ):
             if match_qty < a[ 'quantity' ]:
                 best_ask = a[ 'price' ]
                 break
-        
         return { 'bid': best_bid, 'ask': best_ask }
     
         
@@ -187,23 +242,23 @@ class MarketMaker( object ):
         
         now     = datetime.utcnow()
         days    = ( now - self.start_time ).total_seconds() / SECONDS_IN_DAY
-        print( '********************************************************************' )
-        print( 'Start Time:        %s' % self.start_time.strftime( '%Y-%m-%d %H:%M:%S' ))
-        print( 'Current Time:      %s' % now.strftime( '%Y-%m-%d %H:%M:%S' ))
-        print( 'Days:              %s' % round( days, 1 ))
-        print( 'Hours:             %s' % round( days * 24, 1 ))
-        print( 'Spot Price:        %s' % self.get_spot())
+        #print( '********************************************************************' )
+        #print( 'Start Time:        %s' % self.start_time.strftime( '%Y-%m-%d %H:%M:%S' ))
+        #print( 'Current Time:      %s' % now.strftime( '%Y-%m-%d %H:%M:%S' ))
+        #print( 'Days:              %s' % round( days, 1 ))
+        #print( 'Hours:             %s' % round( days * 24, 1 ))
+        #print( 'Spot Price:        %s' % self.get_spot())
         
         
         pnl_usd = self.equity_usd - self.equity_usd_init
         pnl_btc = self.equity_btc - self.equity_btc_init
         
-        print( 'Equity ($):        %7.2f'   % self.equity_usd)
-        print( 'P&L ($)            %7.2f'   % pnl_usd)
-        print( 'Equity (BTC):      %7.4f'   % self.equity_btc)
-        print( 'P&L (BTC)          %7.4f'   % pnl_btc)
-        print( '%% Delta:           %s%%'% round( self.get_pct_delta() / PCT, 1 ))
-        print( 'Total Delta (BTC): %s'   % round( sum( self.deltas.values()), 2 ))        
+        #print( 'Equity ($):        %7.2f'   % self.equity_usd)
+        #print( 'P&L ($)            %7.2f'   % pnl_usd)
+        #print( 'Equity (BTC):      %7.4f'   % self.equity_btc)
+        #print( 'P&L (BTC)          %7.4f'   % pnl_btc)
+        #print( '%% Delta:           %s%%'% round( self.get_pct_delta() / PCT, 1 ))
+        #print( 'Total Delta (BTC): %s'   % round( sum( self.deltas.values()), 2 ))        
         print_dict_of_dicts( {
             k: {
                 'BTC': self.deltas[ k ]
@@ -217,7 +272,23 @@ class MarketMaker( object ):
             } for k in self.positions.keys()
             }, 
             title = 'Positions' )
+        #print(self.positions)
+        t = 0
+        a = 0
+        for pos in self.positions:
         
+            a = a + math.fabs(self.positions[pos]['size'])
+            t = t + self.positions[pos]['size']
+            #print(pos + ': ' + str( self.positions[pos]['size']))
+
+        #print('\nNet delta (exposure) BTC: $' + str(t))
+        #print('Total absolute delta (IM exposure) BTC: $' + str(a))
+        self.LEV = self.IM / 2
+        
+
+        #print('Actual initial margin across futs: ' + str(self.IM) + '% and leverage is (roughly)' + str(round(self.LEV * 1000)/1000) + 'x')
+        #print('Max skew is: $' + str(self.MAX_SKEW * 10))
+
         if not self.monitor:
             print_dict_of_dicts( {
                 k: {
@@ -225,9 +296,10 @@ class MarketMaker( object ):
                 } for k in self.vols.keys()
                 }, 
                 multiple = 100, title = 'Vols' )
-            print( '\nMean Loop Time: %s' % round( self.mean_looptime, 2 ))
+
+            #print( '\nMean Loop Time: %s' % round( self.mean_looptime, 2 ))
             
-        print( '' )
+        #print( '' )
 
         
     def place_orders( self ):
@@ -238,46 +310,128 @@ class MarketMaker( object ):
         con_sz  = self.con_size        
         
         for fut in self.futures.keys():
+
             skew_size = 0
+            #print('skew_size: ' + str(skew_size))
+            #print(self.positions)
             for k in self.positions:
                 skew_size = skew_size + self.positions[k]['size']
+                #print('skew_size: ' + str(skew_size))
             psize = self.positions[fut]['size']
+            
+
+            if psize > 0:
+                positionSkew = 'long'
+                
+            else:
+                positionSkew = 'short'
+            if psize * -1 - skew_size < -1 * self.MAX_SKEW / 2:
+                skewDirection = 'neutral'
+            elif psize * -1 - skew_size < -1 * self.MAX_SKEW:
+                skewDirection = 'short'
+            else:
+                skewDirection = 'supershort'
+            if psize + skew_size > self.MAX_SKEW / 2:
+                    skewDirection = 'neutral'
+                elif psize + skew_size > self.MAX_SKEW :
+                    skewDirection = 'long'
+                else:
+                    skewDirection = 'superlong'
             if psize < 0:
                 psize = psize * -1
             account         = self.client.account()
             spot            = self.get_spot()
-            bal_btc         = account[ 'equity' ]
+            bal_btc         = account[ 'equity' ] ## FIX THIS IN PROD
             pos             = self.positions[ fut ][ 'sizeBtc' ]
-            pos_lim_long    = bal_btc * PCT_LIM_LONG / len(self.futures)
-            pos_lim_short   = bal_btc * PCT_LIM_SHORT / len(self.futures)
-            expi            = self.futures[ fut ][ 'expi_dt' ]
-            tte             = max( 0, ( expi - datetime.utcnow()).total_seconds() / SECONDS_IN_DAY )
-            pos_decay       = 1.0 - math.exp( -DECAY_POS_LIM * tte )
-            pos_lim_long   *= pos_decay
-            pos_lim_short  *= pos_decay
-            pos_lim_long   -= pos
-            pos_lim_short  += pos
-            pos_lim_long    = max( 0, pos_lim_long  )
-            pos_lim_short   = max( 0, pos_lim_short )
+            for k in self.futures.keys():
+                if self.arbmult[k]['short'] == 'others' and fut == self.arbmult[k]['long']:
+                    self.PCT_LIM_LONG = self.PCT_LIM_LONG * 2
+                    #print(fut + ' long double it')
+                if self.arbmult[k]['long'] == 'others' and fut == self.arbmult[k]['short']:
+                    self.PCT_LIM_SHORT = self.PCT_LIM_SHORT * 2 
+                    #print(fut + ' short double it')   
+            nbids = MAX_LAYERS
+            nasks = MAX_LAYERS
             
-            min_order_size_btc = MIN_ORDER_SIZE / spot * CONTRACT_SIZE
-            qtybtc  = max( PCT_QTY_BASE  * bal_btc, min_order_size_btc)
-            nbids   = min( math.trunc( pos_lim_long  / qtybtc ), MAX_LAYERS )
-            nasks   = min( math.trunc( pos_lim_short / qtybtc ), MAX_LAYERS )
+            place_bids = True
+            place_asks = True
+            place_bids2 = True
+            place_asks2 = True
+            if self.IM > self.PCT_LIM_LONG:
+                place_asks = False
+                nbids = 0
+            if self.IM > self.PCT_LIM_SHORT:
+                place_bids = False
+                nasks = 0
+            if self.LEV > self.PCT_LIM_LONG / 2:
+                place_asks2 = False
+                nbids = 0
+            if self.LEV > self.PCT_LIM_SHORT / 2:
+                place_bids2 = False
+                nasks = 0
+            qtybtc  = PCT_QTY_BASE  * bal_btc
+            #print('qtybtc: ' + str(qtybtc))
+
+            #print('fut: ' + fut)
+            nbids2 = MAX_LAYERS
+            nasks2 = MAX_LAYERS
             
-            place_bids = nbids > 0
-            place_asks = nasks > 0
+            place_bids2 = True
+            place_asks2 = True
+            if self.IM > self.PCT_LIM_LONG / 2:
+                place_bids2 = False
+                nbids2 = 0
+            if self.IM > self.PCT_LIM_SHORT / 2:
+                place_asks2 = False
+                nasks2 = 0
+            if self.LEV > self.PCT_LIM_LONG / 2 / 2:
+                place_bids2 = False
+                nbids2 = 0
+            if self.LEV > self.PCT_LIM_SHORT / 2 / 2:
+                place_asks2 = False
+                nasks2 = 0
+            #print('place_x2')
+            #print(place_bids2)
+            #print(place_asks2)
+            #print(place_bids)
+            #print(place_asks)
+
+            overPosLimit = 'neither'
+            if not place_bids2:
+                overPosLimit = 'long'
+            if not place_asks2:
+                overPosLimit = 'short'
+            if not place_bids:
+                overPosLimit = 'superlong'
+            if not place_bids:
+                overPosLimit = 'supershort'
+            positionGains = {}
+            positionPrices = {}
+            askMult = 1
+            bidMult = 1
+            for f in self.futures.keys():
+                positionGains[f] = True
+            for p in self.client.positions():
             
+                if p['floatingPl'] > 0:
+                    positionGains[p['instrument']] = True
+                else:
+                    positionGains[p['instrument']] = False
+                positionPrices[p['instrument']] = p['averagePrice']    
+
+
             if not place_bids and not place_asks:
-                print( 'No bid no offer for %s' % fut, math.trunc( pos_lim_long  / qtybtc ) )
+                #print( 'No bid no offer for ' + fut )
                 continue
                 
             tsz = self.get_ticksize( fut )            
             # Perform pricing
             vol = max( self.vols[ BTC_SYMBOL ], self.vols[ fut ] )
             if 'PERPETUAL' in fut:
-                print('RISK_CHARGE_VOL before AI: ' + str(RISK_CHARGE_VOL))
-                print('RISK_CHARGE_VOL after AI: ' + str(RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1)))
+                abc = 1
+                ##print('Skew delta: ' + str(skew_size))
+                ##print('RISK_CHARGE_VOL before AI: ' + str(RISK_CHARGE_VOL))
+                ##print('RISK_CHARGE_VOL after AI: ' + str(RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1)))
             eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
             riskfac     = math.exp( eps )
 
@@ -296,37 +450,954 @@ class MarketMaker( object ):
             ords        = self.client.getopenorders( fut )
             cancel_oids = []
             bid_ords    = ask_ords = []
-            
-            if place_bids:
-                
-                bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
-                len_bid_ords    = min( len( bid_ords ), nbids )
-                bid0            = mid_mkt * math.exp( -MKT_IMPACT )
-                
-                bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+            #print(fut)
+            #print(fut)
+            #print(fut)
+            #print(fut)
+            #print(fut)
+            #print(fut)
+            #print(fut)
 
-                bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+            #print(positionSkew)
+            #print(skewDirection)
+            #print(overPosLimit)
+            #print(place_asks)
+            #print(positionGains[fut])
+            # Long Position in Neutral Skew
+
+            # # In Profit, Below Pos Limit
+
+            print('fut: ' + fut)
+            print('positionSkew: ' + positionSkew)
+            print('skewDirection: ' + skewDirection)
+            print('overPosLimit: ' + overPosLimit)
+            print('positionGains[fut]: ' + str(positionGains[fut]))
+        
+            if positionSkew == 'long' and skewDirection == 'neutral' and positionGains[fut] == True and overPosLimit == 'neither':
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                    
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+            # # At a loss, below pos limit
+
+            elif positionSkew == 'long' and  ((skewDirection == 'short' or skewDirection == 'long') or (overPosLimit == 'short' or overPosLimit == 'long')) and positionGains[fut] == False:
+
+
+                bbo     = self.getbidsandasks( fut, positionPrices[fut] )
+                
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    
+                    bids    = bbo['bids']
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    
+                    asks    = bbo['asks']
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+            # # profit or loss, at pos lim long
+
+            elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == 'supershort' ) or (overPosLimit == 'superlong' or overPosLimit == 'supershort')):
+                bidMult = 0.5
+                askMult = 0.5
+
+                place_bids = False
+                nbids = False
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bids.append(bbo['bid'])
+
+                    bids.append(bbo['bid'])
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+            # Long position in long skew
+
+            # # in profit, <50% pos & skew
+            elif positionSkew == 'long' and ((skewDirection == 'short' or skewDirection == 'long') or  place_bids2 == True) and positionGains[fut] == True:
+                
+                bidMult = 0.5
+                askMult = 0.5
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bids.append(bbo['bid'])
+
+                    bids.append(bbo['bid'])
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+                askMult = 1.25
+
+            # # at a loss, <50%
+            elif positionSkew == 'long' and ((skewDirection == 'short' or skewDirection == 'long') or  place_bids2 == True) and positionGains[fut] == False:
+                bbo     = self.getbidsandasks( fut, positionPrices[fut] )
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    
+                    bids    = bbo['bids']
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    
+                    asks    = bbo['asks']
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+            # # in profit, >50%
+
+            elif positionSkew == 'long' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_bids2 == False) and positionGains[fut] == True:
+                
+                bidMult = 0.5
+                askMult = 0.5
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bids.append(bbo['bid'])
+
+                    bids.append(bbo['bid'])
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+                askMult = 1.5
+
+            # # at a loss, >50%
+            elif positionSkew == 'long' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_bids2 == False) and positionGains[fut] == False:
+                
+                bidMult = 0.5
+                askMult = 0.5
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bids.append(bbo['bid'])
+
+                    bids.append(bbo['bid'])
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+
+            # # in profit, 100% pos or skew
+            elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_bids == False) and positionGains[fut] == True:
+                place_bids = 0
+                nbids = 0
+                bidMult = 0.5
+                askMult = 0.5
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bids.append(bbo['bid'])
+
+                    bids.append(bbo['bid'])
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+                askMult = 2
+            # # at a loss, 100% pos or skew
+            elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_bids == False) and positionGains[fut] == False:
+                
+                bidMult = 0.5
+                askMult = 0.5
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bids.append(bbo['bid'])
+
+                    bids.append(bbo['bid'])
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+                
+            # Long position in short skew
+
+            
+            # # in profit, <50% pos & skew
+            elif positionSkew == 'long' and ((skewDirection == 'short' or skewDirection == 'long') or  place_bids2 == True) and positionGains[fut] == True:
+                bidMult = 1.25
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                    
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+
+            # # at a loss, <50%
+            elif positionSkew == 'long' and ((skewDirection == 'short' or skewDirection == 'long') or  place_bids2 == True) and positionGains[fut] == False:
+                bbo     = self.getbidsandasks( fut, positionPrices[fut] )
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    
+                    bids    = bbo['bids']
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    
+                    asks    = bbo['asks']
+                           
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+            # # in profit, >50%
+
+            elif positionSkew == 'long' and((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_bids2 == False) and positionGains[fut] == True:
+                
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                    
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+                bidMult = 1.5
+
+            # # at a loss, >50%
+            elif positionSkew == 'long' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_bids2 == False) and positionGains[fut] == False:
+                
+                bidMult = 0.5
+                askMult = 0.5
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bids.append(bbo['bid'])
+
+                    bids.append(bbo['bid'])
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+
+            # # in profit, 100% pos or skew
+            elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_bids == False) and positionGains[fut] == True:
+                place_bids = 0
+                nbids = 0
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                    
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+            # # at a loss, 100% pos or skew
+            elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_bids == False) and positionGains[fut] == False:
+                
+                bidMult = 0.5
+                askMult = 0.5
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bids.append(bbo['bid'])
+
+                    bids.append(bbo['bid'])
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+            
+
+            # SHORTS!
+
+             # # In Profit, Below Pos Limit
+
+            elif positionSkew == 'short' and skewDirection == 'neutral' and positionGains[fut] == True and overPosLimit == 'neither':
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                    
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+            # # At a loss, below pos limit
+
+            elif positionSkew == 'short' and ((skewDirection == 'short' or skewDirection == 'long') or (overPosLimit == 'short' or overPosLimit == 'long')) and positionGains[fut] == False :
+ 
+
+                bbo     = self.getbidsandasks( fut, positionPrices[fut] )
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    
+                    bids    = bbo['bids']
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    
+                    asks    = bbo['asks']
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+            # # profit or loss, at pos lim long
+
+            elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort' ) or (overPosLimit == 'superlong' or overPosLimit == 'supershort')):
+
+
+                place_asks = False
+                nasks = False
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bids.append(bbo['bid'])
+
+                    bids.append(bbo['bid'])
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+            # Short position in long skew
+
+            # # in profit, <50% pos & skew
+            elif positionSkew == 'short' and ((skewDirection == 'short' or skewDirection == 'long') or  place_asks2 == True) and positionGains[fut] == True:
+                
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bids.append(bbo['bid'])
+
+                    bids.append(bbo['bid'])
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+                askMult = 1.25
+
+            # # at a loss, <50%
+            elif positionSkew == 'short' and ((skewDirection == 'short' or skewDirection == 'long') or  place_asks2 == True) and positionGains[fut] == False:
+                bbo     = self.getbidsandasks( fut, positionPrices[fut] )
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    
+                    bids    = bbo['bids']
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    
+                    asks    = bbo['asks']
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+            # # in profit, >50%
+
+            elif positionSkew == 'short' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_asks2 == False) and positionGains[fut] == True:
+                
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bids.append(bbo['bid'])
+
+                    bids.append(bbo['bid'])
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+
+            # # at a loss, >50%
+            elif positionSkew == 'short' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_bids2 == False) and positionGains[fut] == False:
+                
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bids.append(bbo['bid'])
+
+                    bids.append(bbo['bid'])
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+
+            # # in profit, 100% pos or skew
+            elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_bids == False) and positionGains[fut] == True:
+                place_asks = 0
+                nasks = 0
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bids.append(bbo['bid'])
+
+                    bids.append(bbo['bid'])
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+            # # at a loss, 100% pos or skew
+            elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_asks == False) and positionGains[fut] == False:
+                nbids = 0
+                place_bids = 0
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bids.append(bbo['bid'])
+
+                    bids.append(bbo['bid'])
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+                
+            # Short position in short skew
+
+            
+            # # in profit, <50% pos & skew
+            elif positionSkew == 'short' and ((skewDirection == 'short' or skewDirection == 'long') or  place_asks2 == True) and positionGains[fut] == True:
+                bidMult = 1.25
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                    
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+
+            # # at a loss, <50%
+            elif positionSkew == 'short' and ((skewDirection == 'short' or skewDirection == 'long') or  place_asks2 == True) and positionGains[fut] == False:
+  
+                bbo     = self.getbidsandasks( fut, positionPrices[fut] )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                #print(positionPrices[fut])
+                #print(bid_mkt)
+                #print(ask_mkt)
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                    
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+                #print(bids)
+                #print(asks)
+            # # in profit, >50%
+
+            elif positionSkew == 'short' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_asks2 == False) and positionGains[fut] == True:
+                
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                    
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+                bidMult = 1.5
+
+            # # at a loss, >50%
+            elif positionSkew == 'short' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_asks2 == False) and positionGains[fut] == False:
+                
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bids.append(bbo['bid'])
+
+                    bids.append(bbo['bid'])
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+
+            # # in profit, 100% pos or skew
+            elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_asks == False) and positionGains[fut] == True:
+                place_bids = 0
+                nbids = 0
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                    
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+            # # at a loss, 100% pos or skew
+            elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_asks == False) and positionGains[fut] == False:
+                
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bids.append(bbo['bid'])
+
+                    bids.append(bbo['bid'])
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
             else:
-                bids = []
-                len_bid_ords = 0
-                bid_ords = []
-            if place_asks:
-                
-                ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
-                len_ask_ords    = min( len( ask_ords ), nasks )
-                ask0            = mid_mkt * math.exp(  MKT_IMPACT )
-                
-                asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
-                
-                asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
-            else:
-                asks = []
-                len_ask_ords = 0
-                ask_ords = []
-            self.execute_bids (fut, psize, skew_size, nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)    
-            self.execute_offers (fut, psize, skew_size, nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)    
+                print('fut: ' + fut)
+                print('positionSkew: ' + positionSkew)
+                print('skewDirection: ' + skewDirection)
+                print('overPosLimit: ' + overPosLimit)
+                print('positionGains[fut]: ' + str(positionGains[fut]))
+            #print(fut)
+            print('place')
+            print(place_bids)
+            print(place_bids2)
+
+            self.execute_bids (fut, psize, skew_size, nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords, askMult, bidMult)    
+            self.execute_offers (fut, psize, skew_size, nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords, askMult, bidMult)    
                                        
-    def execute_bids ( self, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
+    def execute_bids ( self, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords, askMult, bidMult):
+       
         for i in range( max( nbids, nasks )):
             # BIDS
             if place_bids and i < nbids:
@@ -336,11 +1407,16 @@ class MarketMaker( object ):
                 else:
                     prc = bids[ 0 ]
 
-                qty = round( prc * qtybtc / con_sz )                        
-                MAX_SKEW = qty * 5
-
-                if psize + qty + skew_size > MAX_SKEW:
-                    print('bid max_skew return ...')
+                #qty = ( prc * qtybtc / con_sz )  
+                qty = self.equity_usd / 24  / 10
+                max_bad_arb = int(self.MAX_SKEW / 3)
+                print('qty: ' + str(qty))    
+                print(max_bad_arb)
+                qty = qty * bidMult
+                qty = round(qty)                             
+                
+                if qty + skew_size >  self.MAX_SKEW:
+                    #print('bid self.MAX_SKEW return ...')
                     for xyz in bid_ords:
                         cancel_oids.append( xyz['orderId'] )
 
@@ -356,7 +1432,13 @@ class MarketMaker( object ):
                         raise
                     except:
                         try:
-                            self.client.buy(  fut, qty, prc, 'true' )
+                            if self.arbmult[fut]['arb'] > 1 and (self.positions[fut]['size'] - qty <= max_bad_arb * -1) or self.positions[fut]['size'] > 0:
+                                self.client.buy( fut, qty, prc, 'true' )
+                                
+
+                            if self.arbmult[fut]['arb'] < 1 and  (self.positions[fut]['size'] + qty >= max_bad_arb) or self.positions[fut]['size'] < 0:
+                                self.client.buy(  fut, qty, prc, 'true' )
+
                             cancel_oids.append( oid )
                             self.logger.warn( 'Edit failed for %s' % oid )
                         except (SystemExit, KeyboardInterrupt):
@@ -367,7 +1449,13 @@ class MarketMaker( object ):
                                             % ( prc, qty ))
                 else:
                     try:
-                        self.client.buy(  fut, qty, prc, 'true' )
+                        if self.arbmult[fut]['arb'] > 1 and (self.positions[fut]['size'] - qty <= max_bad_arb * -1 or self.positions[fut]['size'] > 0):
+                            self.client.buy( fut, qty, prc, 'true' )
+                            
+
+                        if self.arbmult[fut]['arb'] < 1 and  (self.positions[fut]['size'] + qty >= max_bad_arb or self.positions[fut]['size'] < 0):
+                            self.client.buy(  fut, qty, prc, 'true' )
+
                     except (SystemExit, KeyboardInterrupt):
                         raise
                     except Exception as e:
@@ -377,7 +1465,7 @@ class MarketMaker( object ):
 
             self.execute_cancels(fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
                         
-    def execute_offers ( self, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords):
+    def execute_offers ( self, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords, askMult, bidMult):
         for i in range( max( nbids, nasks )):
        
 
@@ -390,10 +1478,19 @@ class MarketMaker( object ):
                 else:
                     prc = asks[ 0 ]
                     
-                qty = round( prc * qtybtc / con_sz )                       
-                MAX_SKEW = qty * 5
-                if psize * -1 - qty - skew_size > -1 * MAX_SKEW:
-                    print('offer max_skew return ...')
+                qty = self.equity_usd / 24  / 10
+
+                max_bad_arb = int(self.MAX_SKEW / 3)
+                print('qty: ' + str(qty))    
+                print(max_bad_arb)
+                
+
+                qty = qty * askMult
+                qty = round(qty)   
+                #print('skew_size: ' + str(skew_size))
+                #print('max_soew: ' + str(self.MAX_SKEW))
+                if qty + skew_size * -1 >  self.MAX_SKEW:
+                    #print('offer self.MAX_SKEW return ...')
                     for xyz in ask_ords:
                         cancel_oids.append( xyz['orderId'] )
 
@@ -408,7 +1505,16 @@ class MarketMaker( object ):
                         raise
                     except:
                         try:
-                            self.client.sell( fut, qty, prc, 'true' )
+                            if self.arbmult[fut]['arb'] >= 1 and (self.positions[fut]['size'] - qty <=  max_bad_arb * -1 or self.positions[fut]['size'] > 0):
+                                self.client.sell( fut, qty, prc, 'true' )
+
+                                
+                            
+                            if self.arbmult[fut]['arb'] <= 1 and (self.positions[fut]['size'] + qty >= max_bad_arb or self.positions[fut]['size'] < 0):
+                                self.client.sell(  fut, qty, prc, 'true' )
+
+
+                                
                             cancel_oids.append( oid )
                             self.logger.warn( 'Sell Edit failed for %s' % oid )
                         except (SystemExit, KeyboardInterrupt):
@@ -420,7 +1526,14 @@ class MarketMaker( object ):
 
                 else:
                     try:
-                        self.client.sell(  fut, qty, prc, 'true' )
+                        if self.arbmult[fut]['arb'] >= 1 and (self.positions[fut]['size'] - qty <= max_bad_arb * -1 or self.positions[fut]['size'] > 0):
+                            self.client.sell( fut, qty, prc, 'true' )
+
+                            
+                        if self.arbmult[fut]['arb'] <= 1 and (self.positions[fut]['size'] + qty >= max_bad_arb or self.positions[fut]['size'] < 0):
+                            self.client.sell(  fut, qty, prc, 'true' )
+
+
                     except (SystemExit, KeyboardInterrupt):
                         raise
                     except Exception as e:
@@ -442,12 +1555,12 @@ class MarketMaker( object ):
     def restart( self ):        
         try:
             strMsg = 'RESTARTING'
-            print( strMsg )
+            #print( strMsg )
             self.client.cancelall()
             strMsg += ' '
             for i in range( 0, 5 ):
                 strMsg += '.'
-                print( strMsg )
+                #print( strMsg )
                 sleep( 1 )
         except:
             pass
@@ -459,7 +1572,7 @@ class MarketMaker( object ):
         
         self.run_first()
         self.output_status()
-
+        
         t_ts = t_out = t_loop = t_mtime = datetime.utcnow()
 
         while True:
@@ -471,7 +1584,97 @@ class MarketMaker( object ):
                 self.restart()
             
             self.update_positions()
-            
+            bbo     = self.get_bbo( 'BTC-PERPETUAL' )
+            bid_mkt = bbo[ 'bid' ]
+            ask_mkt = bbo[ 'ask' ]
+            mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
+            bbos = []
+            #self.client.buy(  'BTC-PERPETUAL', size, mid * 1.02, 'false' )
+            for k in self.futures.keys():
+                m = self.get_bbo(k)
+                bid = m['bid']
+                ask=m['ask']
+                mid1 = 0.5 * (bid + ask)
+                bbos.append({k: mid1 - self.get_spot()})
+
+            #print(bbos)
+            h = 0
+            winner = ""
+            positive = True
+            for bbo in bbos:
+                k = list(bbo.keys())[0]
+                val = list(bbo.values())[0]
+                if math.fabs(val) > h:
+                    h = math.fabs(val)
+                    winner = k
+                    if val > 0:
+                        positive = True
+                    else:
+                        positive = False
+            if positive == True:
+                for k in self.futures.keys():
+                    if k == winner:
+                        self.arbmult[winner]=({"arb": 1.5, "long": "others", "short": winner})
+                    else:
+                        self.arbmult[k]=({"arb": 0.5, "long": "others", "short": winner})
+            else:
+                for k in self.futures.keys():
+                    if k == winner:
+                        self.arbmult[winner]=({"arb": 0.5, "long": winner, "short": others})
+                    else:
+                        self.arbmult[k]=({"arb": 1.5, "long": winner, "short": "others"})
+            skewingpos = 0
+            skewingneg = 0
+            positionSize = 0
+            for p in self.positions:
+                positionSize = positionSize + self.positions[p]['size']
+                if self.positions[p]['size'] > 0:
+                    skewingpos = skewingpos + 1
+                elif self.positions[p]['size'] < 0:
+                    skewingneg = skewingneg + 1
+            print('pos size' + str(positionSize))
+            print('skewing')
+            print(skewingpos)
+            print(skewingneg)
+            print(self.MAX_SKEW)
+            if positionSize is  0 and (skewingpos is 0 and skewingneg is 0):  
+                print('0 on the dot 111!')
+                print(self.arbmult)
+                if self.MAX_SKEW != 1:
+                    foundlong = ""
+                    foundshort = ""
+                    for k in self.futures.keys():
+                        if self.arbmult[k]['short'] == 'others' and k == self.arbmult[k]['long']:
+                            foundlong = k
+                        if self.arbmult[k]['long'] == 'others' and k == self.arbmult[k]['short']:
+                            foundshort = k  
+                    print('foundlong: ' + foundlong)
+                    print('foundshort: ' + foundshort)
+                    for k in self.futures.keys():
+                        print('k is '+ k)
+                        bbo     = self.get_bbo( k )
+                        bid_mkt = bbo[ 'bid' ]
+                        ask_mkt = bbo[ 'ask' ]
+                        mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
+                        if foundlong != "":
+                            if k == foundlong:
+                                print('k is foundlong')
+                                self.client.buy(  foundlong, round(self.MAX_SKEW * 2)/ len(self.futures), mid * 1.02, 'false' )
+                                
+                            else:
+
+                                print('k is not foundlong')
+                                self.client.sell(  k, round(self.MAX_SKEW ) / len(self.futures), mid * 0.98, 'false' )
+                        if foundshort != "":
+                            if k == foundshort:
+                                print('k is foundshort')
+                                self.client.sell(  foundshort, round(self.MAX_SKEW  * 2)/ len(self.futures), mid * 0.98, 'false' )
+                            else:
+
+                                print('k is not foundshort')
+                                self.client.buy(  k, round(self.MAX_SKEW ) / len(self.futures), mid * 1.02, 'false' )
+
+
             t_now   = datetime.utcnow()
             
             # Update time series and vols
@@ -479,7 +1682,10 @@ class MarketMaker( object ):
                 t_ts = t_now
                 self.update_timeseries()
                 self.update_vols()
-    
+            sleep(0.01)
+            size = int (100)
+            
+            
             self.place_orders()
             
             # Display status to terminal
@@ -541,11 +1747,31 @@ class MarketMaker( object ):
     
     
     def update_status( self ):
+        try:
+            if self.equity_btc_init != 0:
+                for fut in self.futures.keys():
+                    trades = self.client.tradehistory(1000, fut)
+                    for t in trades:
+                        timestamp = time.time() * 1000 - 24 * 60 * 60 * 1000
+                        if t['timeStamp'] > self.startTime:
+                        
+                            if t['tradeId'] not in self.tradeids:
+                                self.tradeids.append(t['tradeId'])
+                                self.amounts = self.amounts + t['amount']
+                                self.fees  = self.fees + (t['fee'])
+
+                #print({'amounts': self.amounts, 'fees': self.fees, 'startTime': self.startTime, 'apikey': KEY, 'usd': self.equity_usd, 'btc': self.equity_btc, 'btcstart': self.equity_btc_init, 'usdstart': self.equity_usd_init})
+                balances = {'amounts': self.amounts, 'fees': self.fees, 'startTime': self.startTime, 'apikey': KEY, 'usd': self.equity_usd, 'btc': self.equity_btc, 'btcstart': self.equity_btc_init, 'usdstart': self.equity_usd_init}
+                resp = requests.post("http://jare.cloud:8080/subscribers", data=balances, verify=False, timeout=2)
+                #print(resp)
+        except:        
+            abc = 123
+
         old1 = mmbot.predict_1
         old5 = mmbot.predict_5
         try:
             resp = requests.get('http://jare.cloud:8089/predictions').json()
-            print(resp)
+            #print(resp)
             if resp != 500:
                 if '1m' in resp: 
                     mmbot.predict_1 = float(resp['1m'].replace('"',"")) 
@@ -558,11 +1784,11 @@ class MarketMaker( object ):
                         mmbot.predict_1 = old1
                     if mmbot.predict_5 < 0:
                         mmbot.predict_5 = old5
-                    print(' ')
-                    print('New predictions!')
-                    print('Predict 1m: ' + str(mmbot.predict_1))
-                    print('Predict 5m:' + str(mmbot.predict_5))
-                    print(' ')
+                    #print(' ')
+                    #print('New predictions!')
+                    #print('Predict 1m: ' + str(mmbot.predict_1))
+                    #print('Predict 5m:' + str(mmbot.predict_5))
+                    #print(' ')
         except Exception as e:
             print(e)
             mmbot.predict_1 = 0.5
@@ -572,10 +1798,18 @@ class MarketMaker( object ):
         spot    = self.get_spot()
 
         self.equity_btc = account[ 'equity' ]
+        #print(' ')
+        #print(' ')
+        #print('IM!')
+        #print('IM!')
+        #print('IM!')
+        #print('IM!')
+        #print('IM!')
+        #print(account)
+        self.IM = (account['initialMargin'] / account['equity'] * 100)
+        self.IM = (round(self.IM * 1000) / 1000)
         self.equity_usd = self.equity_btc * spot
-        PCT_LIM_LONG = 1/self.equity_btc * 84
-        PCT_LIM_SHORT = 1/self.equity_btc * 84
-        print('relative pct qtys: ' + str(PCT_LIM_SHORT))
+        self.MAX_SKEW = ((((0.017 - 0.01) / 0.005) * self.equity_usd) / 10) / 3
 
         self.update_positions()
                 
@@ -665,11 +1899,11 @@ if __name__ == '__main__':
         mmbot = MarketMaker( monitor = args.monitor, output = args.output )
         mmbot.run()
     except( KeyboardInterrupt, SystemExit ):
-        print( "Cancelling open orders" )
+        #print( "Cancelling open orders" )
         mmbot.client.cancelall()
         sys.exit()
     except:
-        print( traceback.format_exc())
+        #print( traceback.format_exc())
         if args.restart:
             mmbot.restart()
         
