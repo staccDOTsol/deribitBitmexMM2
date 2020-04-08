@@ -327,14 +327,16 @@ class MarketMaker( object ):
                 positionSkew = 'short' # 8 -40
             print('self.maxskew')
             print(self.MAX_SKEW)
+            print('skew_size')
+            print(skew_size)
             skewDirection = 'neutral'
-            if skew_size / 10 < -1 * self.MAX_SKEW / 3:
+            if skew_size  < -1 * self.MAX_SKEW / 3:
                 skewDirection = 'short'
-            if skew_size / 10< -1 * self.MAX_SKEW / 3* 2:
+            if skew_size < -1 * self.MAX_SKEW / 3* 2:
                 skewDirection = 'supershort'    
-            if skew_size / 10 >  self.MAX_SKEW /3:
+            if skew_size  >  self.MAX_SKEW /3:
                 skewDirection = 'long'
-            if skew_size / 10 > self.MAX_SKEW /3 * 2:
+            if skew_size  > self.MAX_SKEW /3 * 2:
                 skewDirection = 'superlong'
             if psize < 0:
                 psize = psize * -1
@@ -1389,16 +1391,22 @@ class MarketMaker( object ):
                 print('positionGains[fut]: ' + str(positionGains[fut]))
             #print(fut)
             print('place')
+            if place_asks == True:
+                len_ask_ords = 2
+            if place_bids == True:
+                len_bid_ords = 2
             print(place_bids)
             print(place_bids2)
+            print(nbids)
+            print(nbids2)
 
             self.execute_bids (fut, psize, skew_size, nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords, askMult, bidMult)    
             self.execute_offers (fut, psize, skew_size, nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords, askMult, bidMult)    
                                        
     def execute_bids ( self, fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords, askMult, bidMult):
        
+        print('# BIDS')
         for i in range( max( nbids, nasks )):
-            # BIDS
             if place_bids and i < nbids:
 
                 if i > 0:
@@ -1415,31 +1423,31 @@ class MarketMaker( object ):
                 qty = round(qty)                             
                 
                 if qty + skew_size >  self.MAX_SKEW:
-                    #print('bid self.MAX_SKEW return ...')
+                    print('bid self.MAX_SKEW return ...')
                     for xyz in bid_ords:
                         cancel_oids.append( xyz['orderId'] )
 
                     self.execute_cancels(fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
                         
                     return
-                if i < len_bid_ords:    
 
-                    oid = bid_ords[ i ][ 'orderId' ]
+                if i < len_bid_ords:    
+                    print('i less')
                     try:
+                        oid = bid_ords[ i ][ 'orderId' ]
+                    
                         self.client.edit( oid, qty, prc )
                     except (SystemExit, KeyboardInterrupt):
                         raise
                     except:
                         try:
-                            if self.arbmult[fut]['arb'] > 1 and (self.positions[fut]['size'] - qty <= max_bad_arb * -1) or self.positions[fut]['size'] > 0:
+                            if self.arbmult[fut]['arb'] > 1 and (self.positions[fut]['size'] - qty <= max_bad_arb / 3 * -1):
                                 self.client.buy( fut, qty, prc, 'true' )
                                 
 
-                            if self.arbmult[fut]['arb'] < 1 and  (self.positions[fut]['size'] + qty >= max_bad_arb) or self.positions[fut]['size'] < 0:
+                            if self.arbmult[fut]['arb'] < 1 :
                                 self.client.buy(  fut, qty, prc, 'true' )
 
-                            cancel_oids.append( oid )
-                            self.logger.warn( 'Edit failed for %s' % oid )
                         except (SystemExit, KeyboardInterrupt):
                             raise
                         except Exception as e:
@@ -1448,11 +1456,11 @@ class MarketMaker( object ):
                                             % ( prc, qty ))
                 else:
                     try:
-                        if self.arbmult[fut]['arb'] > 1 and (self.positions[fut]['size'] - qty <= max_bad_arb * -1 or self.positions[fut]['size'] > 0):
+                        if self.arbmult[fut]['arb'] > 1 and (self.positions[fut]['size'] - qty <= max_bad_arb / 3 * -1):
                             self.client.buy( fut, qty, prc, 'true' )
                             
 
-                        if self.arbmult[fut]['arb'] < 1 and  (self.positions[fut]['size'] + qty >= max_bad_arb or self.positions[fut]['size'] < 0):
+                        if self.arbmult[fut]['arb'] < 1 :
                             self.client.buy(  fut, qty, prc, 'true' )
 
                     except (SystemExit, KeyboardInterrupt):
@@ -1468,7 +1476,7 @@ class MarketMaker( object ):
         for i in range( max( nbids, nasks )):
        
 
-            # OFFERS
+            print('# OFFERS')
 
             if place_asks and i < nasks:
 
@@ -1497,25 +1505,25 @@ class MarketMaker( object ):
                     self.execute_cancels(fut, psize, skew_size,  nbids, nasks, place_bids, place_asks, bids, asks, bid_ords, ask_ords, qtybtc, con_sz, tsz, cancel_oids, len_bid_ords, len_ask_ords)
                     return
                 if i < len_ask_ords:
-                    oid = ask_ords[ i ][ 'orderId' ]
+                    
                     try:
+                        oid = ask_ords[ i ][ 'orderId' ]
+                    
                         self.client.edit( oid, qty, prc )
                     except (SystemExit, KeyboardInterrupt):
                         raise
                     except:
                         try:
-                            if self.arbmult[fut]['arb'] >= 1 and (self.positions[fut]['size'] - qty <=  max_bad_arb * -1 or self.positions[fut]['size'] > 0):
+                            if self.arbmult[fut]['arb'] >= 1 :
                                 self.client.sell( fut, qty, prc, 'true' )
 
                                 
                             
-                            if self.arbmult[fut]['arb'] <= 1 and (self.positions[fut]['size'] + qty >= max_bad_arb or self.positions[fut]['size'] < 0):
+                            if self.arbmult[fut]['arb'] <= 1 and self.positions[fut]['size'] + qty >= max_bad_arb / 3:
                                 self.client.sell(  fut, qty, prc, 'true' )
 
 
                                 
-                            cancel_oids.append( oid )
-                            self.logger.warn( 'Sell Edit failed for %s' % oid )
                         except (SystemExit, KeyboardInterrupt):
                             raise
                         except Exception as e:
@@ -1525,11 +1533,11 @@ class MarketMaker( object ):
 
                 else:
                     try:
-                        if self.arbmult[fut]['arb'] >= 1 and (self.positions[fut]['size'] - qty <= max_bad_arb * -1 or self.positions[fut]['size'] > 0):
+                        if self.arbmult[fut]['arb'] >= 1 :
                             self.client.sell( fut, qty, prc, 'true' )
 
                             
-                        if self.arbmult[fut]['arb'] <= 1 and (self.positions[fut]['size'] + qty >= max_bad_arb or self.positions[fut]['size'] < 0):
+                        if self.arbmult[fut]['arb'] <= 1 and (self.positions[fut]['size'] + qty >= max_bad_arb / 3):
                             self.client.sell(  fut, qty, prc, 'true' )
 
 
@@ -1554,7 +1562,7 @@ class MarketMaker( object ):
     def restart( self ):        
         try:
             strMsg = 'RESTARTING'
-            #print( strMsg )
+            print( strMsg )
             self.client.cancelall()
             strMsg += ' '
             for i in range( 0, 5 ):
@@ -1902,7 +1910,7 @@ if __name__ == '__main__':
         mmbot.client.cancelall()
         sys.exit()
     except:
-        #print( traceback.format_exc())
+        print( traceback.format_exc())
         if args.restart:
             mmbot.restart()
         
