@@ -4,6 +4,7 @@ from collections    import OrderedDict
 from datetime       import datetime
 from os.path        import getmtime
 from time           import sleep
+from datetime import date, timedelta
 from utils          import ( get_logger, lag, print_dict, print_dict_of_dicts, sort_by_key,
                              ticksize_ceil, ticksize_floor, ticksize_round )
 import requests
@@ -100,7 +101,7 @@ class MarketMaker( object ):
         self.seriesData = {}
         self.seriesData[(datetime.strptime((date.today() - timedelta(days=1)).strftime('%Y-%m-%d'), '%Y-%m-%d'))] = 0
             
-        self.startUsd
+        self.startUsd = 0
         self.IM = 0
         self.LEV = 0
         self.tradeids = []
