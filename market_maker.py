@@ -868,7 +868,7 @@ class MarketMaker( object ):
                     ask_ords = []
 
             # # in profit, 100% pos or skew
-            elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_bids == False) and positionGains[fut] == True:
+            elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == '    ') or place_bids == False) and positionGains[fut] == True:
                 place_bids = 0
                 nbids = 0
                 if place_bids:
@@ -1418,7 +1418,7 @@ class MarketMaker( object ):
                     prc = bids[ 0 ]
 
                 #qty = ( prc * qtybtc / con_sz )  
-                qty = self.equity_usd / 24  / 10
+                qty = self.equity_usd / 24  / 10 / 2
                 max_bad_arb = int(self.MAX_SKEW / 3)
                 print('qty: ' + str(qty))    
                 print(max_bad_arb)
@@ -1488,7 +1488,7 @@ class MarketMaker( object ):
                 else:
                     prc = asks[ 0 ]
                     
-                qty = self.equity_usd / 24  / 10
+                qty = self.equity_usd / 24  / 10 / 2
 
                 max_bad_arb = int(self.MAX_SKEW / 3)
                 print('qty: ' + str(qty))    
