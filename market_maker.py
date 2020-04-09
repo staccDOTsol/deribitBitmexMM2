@@ -1141,16 +1141,13 @@ class MarketMaker( object ):
 
             # # in profit, 100% pos or skew
             elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_bids == False) and positionGains[fut] == True:
-                place_asks = 0
-                nasks = 0
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
-                    bids = []
-                    bids.append(bbo['bid'])
-
-                    bids.append(bbo['bid'])
+                    
+                    bids    = bbo['bids']
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
                 else:
                     bids = []
                     len_bid_ords = 0
@@ -1159,14 +1156,15 @@ class MarketMaker( object ):
                     
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
                     len_ask_ords    = min( len( ask_ords ), nasks )
-                    asks = []
-                    asks.append(bbo['ask'])
-
-                    asks.append(bbo['ask'])
+                    
+                    asks    = bbo['asks']
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
                 else:
                     asks = []
                     len_ask_ords = 0
                     ask_ords = []
+           
             # # at a loss, 100% pos or skew
             elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_asks == False) and positionGains[fut] == False:
                 nbids = 0
