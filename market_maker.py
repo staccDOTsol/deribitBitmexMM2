@@ -482,6 +482,20 @@ class MarketMaker( object ):
             print('positionGains[fut]: ' + str(positionGains[fut]))
         
             if positionSkew == 'long' and skewDirection == 'neutral' and positionGains[fut] == True and overPosLimit == 'neither':
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -510,7 +524,7 @@ class MarketMaker( object ):
                     ask_ords = []
             # # At a loss, below pos limit
 
-            elif positionSkew == 'long' and  ((skewDirection == 'short' or skewDirection == 'long') or (overPosLimit == 'short' or overPosLimit == 'long')) and positionGains[fut] == False:
+            elif positionSkew == 'long' and  ((overPosLimit == 'short' or overPosLimit == 'long')) and positionGains[fut] == False:
 
 
                 bbo     = self.getbidsandasks( fut, positionPrices[fut] )
@@ -555,7 +569,21 @@ class MarketMaker( object ):
             # # profit or loss, at pos lim long
 
             elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == 'supershort' ) or (overPosLimit == 'superlong' or overPosLimit == 'supershort')):
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
                 
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
 
                 place_bids = False
                 nbids = False
@@ -586,8 +614,23 @@ class MarketMaker( object ):
             # Long position in long skew
 
             # # in profit, <50% pos & skew
-            elif positionSkew == 'long' and ((skewDirection == 'short' or skewDirection == 'long') or  place_bids2 == True) and positionGains[fut] == True:
+            elif positionSkew == 'long' and (  place_bids2 == True) and positionGains[fut] == True:
                 askMult = 1.25
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -617,7 +660,7 @@ class MarketMaker( object ):
                     ask_ords = []
                 
             # # at a loss, <50%
-            elif positionSkew == 'long' and ((skewDirection == 'short' or skewDirection == 'long') or  place_bids2 == True) and positionGains[fut] == False:
+            elif positionSkew == 'long' and (  place_bids2 == True) and positionGains[fut] == False:
                 bbo     = self.getbidsandasks( fut, positionPrices[fut] )
                 bid_mkt = bbo[ 'bid' ]
                 ask_mkt = bbo[ 'ask' ]
@@ -660,8 +703,22 @@ class MarketMaker( object ):
                     ask_ords = []
             # # in profit, >50%
 
-            elif positionSkew == 'long' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_bids2 == False) and positionGains[fut] == True:
+            elif positionSkew == 'long' and (  place_bids2 == False) and positionGains[fut] == True:
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
                 
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 askMult = 1.25
                 if place_bids:
                 
@@ -693,8 +750,22 @@ class MarketMaker( object ):
                 
 
             # # at a loss, >50%
-            elif positionSkew == 'long' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_bids2 == False) and positionGains[fut] == False:
+            elif positionSkew == 'long' and (  place_bids2 == False) and positionGains[fut] == False:
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
                 
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -724,7 +795,22 @@ class MarketMaker( object ):
                     ask_ords = []
 
             # # in profit, 100% pos or skew
-            elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_bids == False) and positionGains[fut] == True:
+            elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or (overPosLimit == 'superlong' or overPosLimit == 'supershort')) and positionGains[fut] == True:
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 place_bids = 0
                 nbids = 0
                 if place_bids:
@@ -754,6 +840,21 @@ class MarketMaker( object ):
                 askMult = 1.25
             # # at a loss, 100% pos or skew
             elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_bids == False) and positionGains[fut] == False:
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 nbids = 0
                 place_bids = False
                 askMult = 1.25
@@ -786,8 +887,23 @@ class MarketMaker( object ):
 
             
             # # in profit, <50% pos & skew
-            elif positionSkew == 'long' and ((skewDirection == 'short' or skewDirection == 'long') or  place_bids2 == True) and positionGains[fut] == True:
+            elif positionSkew == 'long' and (  place_bids2 == True) and positionGains[fut] == True:
                 bidMult = 1.25
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -819,7 +935,7 @@ class MarketMaker( object ):
                     ask_ords = []
 
             # # at a loss, <50%
-            elif positionSkew == 'long' and ((skewDirection == 'short' or skewDirection == 'long') or  place_bids2 == True) and positionGains[fut] == False:
+            elif positionSkew == 'long' and (  place_bids2 == True) and positionGains[fut] == False:
                 bbo     = self.getbidsandasks( fut, positionPrices[fut] )
                 bid_mkt = bbo[ 'bid' ]
                 ask_mkt = bbo[ 'ask' ]
@@ -862,8 +978,22 @@ class MarketMaker( object ):
                     ask_ords = []
             # # in profit, >50%
 
-            elif positionSkew == 'long' and((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_bids2 == False) and positionGains[fut] == True:
+            elif positionSkew == 'long' and(  place_bids2 == False) and positionGains[fut] == True:
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
                 
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -896,8 +1026,22 @@ class MarketMaker( object ):
                 bidMult = 1.25
 
             # # at a loss, >50%
-            elif positionSkew == 'long' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_bids2 == False) and positionGains[fut] == False:
+            elif positionSkew == 'long' and (  place_bids2 == False) and positionGains[fut] == False:
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
                 
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -926,9 +1070,24 @@ class MarketMaker( object ):
                     ask_ords = []
 
             # # in profit, 100% pos or skew
-            elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == '    ') or place_bids == False) and positionGains[fut] == True:
+            elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == '    ') or (overPosLimit == 'superlong' or overPosLimit == 'supershort')) and positionGains[fut] == True:
                 place_bids = 0
                 nbids = 0
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -957,6 +1116,21 @@ class MarketMaker( object ):
                     ask_ords = []
             # # at a loss, 100% pos or skew
             elif positionSkew == 'long' and positionGains[fut] == False:
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 if place_bids == False:
                     nbids = 0
                     place_bids = 0
@@ -995,6 +1169,21 @@ class MarketMaker( object ):
              # # In Profit, Below Pos Limit
 
             elif positionSkew == 'short' and skewDirection == 'neutral' and positionGains[fut] == True and overPosLimit == 'neither':
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -1023,7 +1212,7 @@ class MarketMaker( object ):
                     ask_ords = []
             # # At a loss, below pos limit
 
-            elif positionSkew == 'short' and ((skewDirection == 'short' or skewDirection == 'long') or (overPosLimit == 'short' or overPosLimit == 'long')) and positionGains[fut] == False :
+            elif positionSkew == 'short' and ((overPosLimit == 'short' or overPosLimit == 'long')) and positionGains[fut] == False :
  
 
                 bbo     = self.getbidsandasks( fut, positionPrices[fut] )
@@ -1067,6 +1256,20 @@ class MarketMaker( object ):
             # # profit or loss, at pos lim long
 
             elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort' ) or (overPosLimit == 'superlong' or overPosLimit == 'supershort')):
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
 
 
                 place_asks = False
@@ -1098,8 +1301,22 @@ class MarketMaker( object ):
             # Short position in long skew
 
             # # in profit, <50% pos & skew
-            elif positionSkew == 'short' and ((skewDirection == 'short' or skewDirection == 'long') or  place_asks2 == True) and positionGains[fut] == True:
+            elif positionSkew == 'short' and (  place_asks2 == True) and positionGains[fut] == True:
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
                 
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -1131,7 +1348,7 @@ class MarketMaker( object ):
                 askMult = 1.25
 
             # # at a loss, <50%
-            elif positionSkew == 'short' and ((skewDirection == 'short' or skewDirection == 'long') or  place_asks2 == True) and positionGains[fut] == False:
+            elif positionSkew == 'short' and (  place_asks2 == True) and positionGains[fut] == False:
                 bbo     = self.getbidsandasks( fut, positionPrices[fut] )
                 bid_mkt = bbo[ 'bid' ]
                 ask_mkt = bbo[ 'ask' ]
@@ -1172,8 +1389,22 @@ class MarketMaker( object ):
                     ask_ords = []
             # # in profit, >50%
 
-            elif positionSkew == 'short' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_asks2 == False) and positionGains[fut] == True:
+            elif positionSkew == 'short' and (  place_asks2 == False) and positionGains[fut] == True:
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
                 
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -1204,8 +1435,22 @@ class MarketMaker( object ):
                     ask_ords = []
 
             # # at a loss, >50%
-            elif positionSkew == 'short' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_bids2 == False) and positionGains[fut] == False:
+            elif positionSkew == 'short' and (  place_asks2 == False) and positionGains[fut] == False:
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
                 
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -1234,8 +1479,23 @@ class MarketMaker( object ):
                     ask_ords = []
 
             # # in profit, 100% pos or skew
-            elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_bids == False) and positionGains[fut] == True:
+            elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or (overPosLimit == 'superlong' or overPosLimit == 'supershort')) and positionGains[fut] == True:
                 nasks = 0
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 place_asks = False
                 if place_bids:
                 
@@ -1266,6 +1526,21 @@ class MarketMaker( object ):
            
             # # at a loss, 100% pos or skew
             elif positionSkew == 'short' and positionGains[fut] == False:
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 if place_asks == False:
                     nasks = 0
                     place_asks = 0
@@ -1301,8 +1576,38 @@ class MarketMaker( object ):
 
             
             # # in profit, <50% pos & skew
-            elif positionSkew == 'short' and ((skewDirection == 'short' or skewDirection == 'long') or  place_asks2 == True) and positionGains[fut] == True:
+            elif positionSkew == 'short' and (  place_asks2 == True) and positionGains[fut] == True:
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 bidMult = 1.25
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -1330,7 +1635,7 @@ class MarketMaker( object ):
                     ask_ords = []
 
             # # at a loss, <50%
-            elif positionSkew == 'short' and ((skewDirection == 'short' or skewDirection == 'long') or  place_asks2 == True) and positionGains[fut] == False:
+            elif positionSkew == 'short' and (  place_asks2 == True) and positionGains[fut] == False:
   
                 bbo     = self.getbidsandasks( fut, positionPrices[fut] )
                 bid_mkt = bbo[ 'bid' ]
@@ -1372,8 +1677,23 @@ class MarketMaker( object ):
                 #print(asks)
             # # in profit, >50%
 
-            elif positionSkew == 'short' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_asks2 == False) and positionGains[fut] == True:
+            elif positionSkew == 'short' and (  place_asks2 == False) and positionGains[fut] == True:
                 bidMult = 1.25
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -1402,8 +1722,22 @@ class MarketMaker( object ):
                 bidMult = 1.5
 
             # # at a loss, >50%
-            elif positionSkew == 'short' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_asks2 == False) and positionGains[fut] == False:
+            elif positionSkew == 'short' and (  place_asks2 == False) and positionGains[fut] == False:
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
                 
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -1432,7 +1766,22 @@ class MarketMaker( object ):
                     ask_ords = []
 
             # # in profit, 100% pos or skew
-            elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_asks == False) and positionGains[fut] == True:
+            elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or (overPosLimit == 'superlong' or overPosLimit == 'supershort')) and positionGains[fut] == True:
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 place_asks = 0
                 nasks = 0
                 bidMult = 1.25
@@ -1462,7 +1811,22 @@ class MarketMaker( object ):
                     len_ask_ords = 0
                     ask_ords = []
             # # at a loss, 100% pos or skew
-            elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_asks == False) and positionGains[fut] == False:
+            elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or (overPosLimit == 'superlong' or overPosLimit == 'supershort')) and positionGains[fut] == False:
+                eps         = BP * vol * (RISK_CHARGE_VOL * ((self.predict_1 * self.predict_5) + 1))
+                riskfac     = math.exp( eps )
+
+                bbo     = self.get_bbo( fut )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+
                 nasks = 0
                 place_asks = 0
                 bidMult = 1.25
