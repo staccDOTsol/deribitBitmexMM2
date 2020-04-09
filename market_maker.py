@@ -65,7 +65,7 @@ PCT                 = 100 * BP  # one percentage point
 
 PCT_QTY_BASE        = 100       # pct order qty in bps as pct of acct on each order
 MIN_LOOP_TIME       =   0.2       # Minimum time between loops
-RISK_CHARGE_VOL     =  1	  # vol risk charge in bps per 100 vol
+RISK_CHARGE_VOL     =  1      # vol risk charge in bps per 100 vol
 SECONDS_IN_DAY      = 3600 * 24
 SECONDS_IN_YEAR     = 365 * SECONDS_IN_DAY
 WAVELEN_MTIME_CHK   = 15        # time in seconds between check for file change
@@ -514,11 +514,25 @@ class MarketMaker( object ):
 
 
                 bbo     = self.getbidsandasks( fut, positionPrices[fut] )
-                
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                #print(positionPrices[fut])
+                #print(bid_mkt)
+                #print(ask_mkt)
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
                     
                     bids    = bbo['bids']
                     bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
@@ -541,8 +555,7 @@ class MarketMaker( object ):
             # # profit or loss, at pos lim long
 
             elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == 'supershort' ) or (overPosLimit == 'superlong' or overPosLimit == 'supershort')):
-                bidMult = 0.5
-                askMult = 0.5
+                
 
                 place_bids = False
                 nbids = False
@@ -574,10 +587,146 @@ class MarketMaker( object ):
 
             # # in profit, <50% pos & skew
             elif positionSkew == 'long' and ((skewDirection == 'short' or skewDirection == 'long') or  place_bids2 == True) and positionGains[fut] == True:
+                askMult = 1.25
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+                
+            # # at a loss, <50%
+            elif positionSkew == 'long' and ((skewDirection == 'short' or skewDirection == 'long') or  place_bids2 == True) and positionGains[fut] == False:
+                bbo     = self.getbidsandasks( fut, positionPrices[fut] )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                #print(positionPrices[fut])
+                #print(bid_mkt)
+                #print(ask_mkt)
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    
+                    asks    = bbo['asks']
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+            # # in profit, >50%
+
+            elif positionSkew == 'long' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_bids2 == False) and positionGains[fut] == True:
+                
+                askMult = 1.25
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+                
+
+            # # at a loss, >50%
+            elif positionSkew == 'long' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_bids2 == False) and positionGains[fut] == False:
+                
+                if place_bids:
+                
+                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                    len_bid_ords    = min( len( bid_ords ), nbids )
+                    bids = []
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                
+                else:
+                    bids = []
+                    len_bid_ords = 0
+                    bid_ords = []
+                if place_asks:
+                    
+                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                    len_ask_ords    = min( len( ask_ords ), nasks )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
+                else:
+                    asks = []
+                    len_ask_ords = 0
+                    ask_ords = []
+
+            # # in profit, 100% pos or skew
+            elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_bids == False) and positionGains[fut] == True:
+                place_bids = 0
                 nbids = 0
-                place_bids = False
-                bidMult = 0.5
-                askMult = 0.5
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -603,131 +752,11 @@ class MarketMaker( object ):
                     len_ask_ords = 0
                     ask_ords = []
                 askMult = 1.25
-
-            # # at a loss, <50%
-            elif positionSkew == 'long' and ((skewDirection == 'short' or skewDirection == 'long') or  place_bids2 == True) and positionGains[fut] == False:
-                bbo     = self.getbidsandasks( fut, positionPrices[fut] )
-                if place_bids:
-                
-                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
-                    len_bid_ords    = min( len( bid_ords ), nbids )
-                    
-                    bids    = bbo['bids']
-                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
-                else:
-                    bids = []
-                    len_bid_ords = 0
-                    bid_ords = []
-                if place_asks:
-                    
-                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
-                    len_ask_ords    = min( len( ask_ords ), nasks )
-                    
-                    asks    = bbo['asks']
-                    
-                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
-                else:
-                    asks = []
-                    len_ask_ords = 0
-                    ask_ords = []
-            # # in profit, >50%
-
-            elif positionSkew == 'long' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_bids2 == False) and positionGains[fut] == True:
-                
-                bidMult = 0.5
-                askMult = 0.5
-                if place_bids:
-                
-                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
-                    len_bid_ords    = min( len( bid_ords ), nbids )
-                    bids = []
-                    bids.append(bbo['bid'])
-
-                    bids.append(bbo['bid'])
-                else:
-                    bids = []
-                    len_bid_ords = 0
-                    bid_ords = []
-                if place_asks:
-                    
-                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
-                    len_ask_ords    = min( len( ask_ords ), nasks )
-                    asks = []
-                    asks.append(bbo['ask'])
-
-                    asks.append(bbo['ask'])
-                else:
-                    asks = []
-                    len_ask_ords = 0
-                    ask_ords = []
-                askMult = 1.5
-
-            # # at a loss, >50%
-            elif positionSkew == 'long' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_bids2 == False) and positionGains[fut] == False:
-                
-                bidMult = 0.5
-                askMult = 0.5
-                if place_bids:
-                
-                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
-                    len_bid_ords    = min( len( bid_ords ), nbids )
-                    bids = []
-                    bids.append(bbo['bid'])
-
-                    bids.append(bbo['bid'])
-                else:
-                    bids = []
-                    len_bid_ords = 0
-                    bid_ords = []
-                if place_asks:
-                    
-                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
-                    len_ask_ords    = min( len( ask_ords ), nasks )
-                    asks = []
-                    asks.append(bbo['ask'])
-
-                    asks.append(bbo['ask'])
-                else:
-                    asks = []
-                    len_ask_ords = 0
-                    ask_ords = []
-
-            # # in profit, 100% pos or skew
-            elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_bids == False) and positionGains[fut] == True:
-                place_bids = 0
-                nbids = 0
-                bidMult = 0.5
-                askMult = 0.5
-                if place_bids:
-                
-                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
-                    len_bid_ords    = min( len( bid_ords ), nbids )
-                    bids = []
-                    bids.append(bbo['bid'])
-
-                    bids.append(bbo['bid'])
-                else:
-                    bids = []
-                    len_bid_ords = 0
-                    bid_ords = []
-                if place_asks:
-                    
-                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
-                    len_ask_ords    = min( len( ask_ords ), nasks )
-                    asks = []
-                    asks.append(bbo['ask'])
-
-                    asks.append(bbo['ask'])
-                else:
-                    asks = []
-                    len_ask_ords = 0
-                    ask_ords = []
-                askMult = 2
             # # at a loss, 100% pos or skew
             elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_bids == False) and positionGains[fut] == False:
-                
-                bidMult = 0.5
-                askMult = 0.5
+                nbids = 0
+                place_bids = False
+                askMult = 1.25
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -752,7 +781,7 @@ class MarketMaker( object ):
                     asks = []
                     len_ask_ords = 0
                     ask_ords = []
-                
+                    
             # Long position in short skew
 
             
@@ -765,9 +794,12 @@ class MarketMaker( object ):
                     len_bid_ords    = min( len( bid_ords ), nbids )
                     bid0            = mid_mkt * math.exp( -MKT_IMPACT )
                     
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
                     bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
 
                     bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                
                 else:
                     bids = []
                     len_bid_ords = 0
@@ -789,13 +821,29 @@ class MarketMaker( object ):
             # # at a loss, <50%
             elif positionSkew == 'long' and ((skewDirection == 'short' or skewDirection == 'long') or  place_bids2 == True) and positionGains[fut] == False:
                 bbo     = self.getbidsandasks( fut, positionPrices[fut] )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                #print(positionPrices[fut])
+                #print(bid_mkt)
+                #print(ask_mkt)
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
                     
-                    bids    = bbo['bids']
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+
                     bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                
                 else:
                     bids = []
                     len_bid_ords = 0
@@ -821,9 +869,12 @@ class MarketMaker( object ):
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
                     bids = []
-                    bids.append(bbo['bid'])
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
 
-                    bids.append(bbo['bid'])
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                
                 else:
                     bids = []
                     len_bid_ords = 0
@@ -833,28 +884,30 @@ class MarketMaker( object ):
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
                     len_ask_ords    = min( len( ask_ords ), nasks )
                     asks = []
-                    asks.append(bbo['ask'])
-
-                    asks.append(bbo['ask'])
+                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                    
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
                 else:
                     asks = []
                     len_ask_ords = 0
                     ask_ords = []
-                bidMult = 1.5
+                bidMult = 1.25
 
             # # at a loss, >50%
             elif positionSkew == 'long' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_bids2 == False) and positionGains[fut] == False:
                 
-                bidMult = 0.5
-                askMult = 0.5
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
-                    bids = []
-                    bids.append(bbo['bid'])
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
 
-                    bids.append(bbo['bid'])
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                
                 else:
                     bids = []
                     len_bid_ords = 0
@@ -903,36 +956,39 @@ class MarketMaker( object ):
                     len_ask_ords = 0
                     ask_ords = []
             # # at a loss, 100% pos or skew
-            elif positionSkew == 'long' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_bids == False) and positionGains[fut] == False:
-                nbids = 0
-                place_bids = 0
-                bidMult = 0.5
-                askMult = 0.5
-                if place_bids:
-                
-                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
-                    len_bid_ords    = min( len( bid_ords ), nbids )
-                    bids = []
-                    bids.append(bbo['bid'])
-
-                    bids.append(bbo['bid'])
-                else:
-                    bids = []
-                    len_bid_ords = 0
-                    bid_ords = []
-                if place_asks:
+            elif positionSkew == 'long' and positionGains[fut] == False:
+                if place_bids == False:
+                    nbids = 0
+                    place_bids = 0
+                if skewDirection == 'short' or skewDirection == 'supershort':
+                    if place_bids:
                     
-                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
-                    len_ask_ords    = min( len( ask_ords ), nasks )
-                    asks = []
-                    asks.append(bbo['ask'])
+                        bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                        len_bid_ords    = min( len( bid_ords ), nbids )
+                        bids = []
+                        bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                        
+                        bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
 
-                    asks.append(bbo['ask'])
-                else:
-                    asks = []
-                    len_ask_ords = 0
-                    ask_ords = []
-            
+                        bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                    
+                    else:
+                        bids = []
+                        len_bid_ords = 0
+                        bid_ords = []
+                    if place_asks:
+                        
+                        ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                        len_ask_ords    = min( len( ask_ords ), nasks )
+                        asks = []
+                        asks.append(bbo['ask'])
+
+                        asks.append(bbo['ask'])
+                    else:
+                        asks = []
+                        len_ask_ords = 0
+                        ask_ords = []
+                
 
             # SHORTS!
 
@@ -971,6 +1027,18 @@ class MarketMaker( object ):
  
 
                 bbo     = self.getbidsandasks( fut, positionPrices[fut] )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                #print(positionPrices[fut])
+                #print(bid_mkt)
+                #print(ask_mkt)
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -987,7 +1055,9 @@ class MarketMaker( object ):
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
                     len_ask_ords    = min( len( ask_ords ), nasks )
                     
-                    asks    = bbo['asks']
+                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                    
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
                     
                     asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
                 else:
@@ -1035,9 +1105,11 @@ class MarketMaker( object ):
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
                     bids = []
-                    bids.append(bbo['bid'])
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
 
-                    bids.append(bbo['bid'])
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
                 else:
                     bids = []
                     len_bid_ords = 0
@@ -1047,9 +1119,11 @@ class MarketMaker( object ):
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
                     len_ask_ords    = min( len( ask_ords ), nasks )
                     asks = []
-                    asks.append(bbo['ask'])
-
-                    asks.append(bbo['ask'])
+                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                    
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
                 else:
                     asks = []
                     len_ask_ords = 0
@@ -1059,6 +1133,18 @@ class MarketMaker( object ):
             # # at a loss, <50%
             elif positionSkew == 'short' and ((skewDirection == 'short' or skewDirection == 'long') or  place_asks2 == True) and positionGains[fut] == False:
                 bbo     = self.getbidsandasks( fut, positionPrices[fut] )
+                bid_mkt = bbo[ 'bid' ]
+                ask_mkt = bbo[ 'ask' ]
+                #print(positionPrices[fut])
+                #print(bid_mkt)
+                #print(ask_mkt)
+                if bid_mkt is None and ask_mkt is None:
+                    bid_mkt = ask_mkt = spot
+                elif bid_mkt is None:
+                    bid_mkt = min( spot, ask_mkt )
+                elif ask_mkt is None:
+                    ask_mkt = max( spot, bid_mkt )
+                mid_mkt = 0.5 * ( bid_mkt + ask_mkt )
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
@@ -1075,7 +1161,9 @@ class MarketMaker( object ):
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
                     len_ask_ords    = min( len( ask_ords ), nasks )
                     
-                    asks    = bbo['asks']
+                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                    
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
                     
                     asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
                 else:
@@ -1091,9 +1179,11 @@ class MarketMaker( object ):
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
                     bids = []
-                    bids.append(bbo['bid'])
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
 
-                    bids.append(bbo['bid'])
+                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
                 else:
                     bids = []
                     len_bid_ords = 0
@@ -1103,9 +1193,11 @@ class MarketMaker( object ):
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
                     len_ask_ords    = min( len( ask_ords ), nasks )
                     asks = []
-                    asks.append(bbo['ask'])
-
-                    asks.append(bbo['ask'])
+                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                    
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
                 else:
                     asks = []
                     len_ask_ords = 0
@@ -1131,9 +1223,11 @@ class MarketMaker( object ):
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
                     len_ask_ords    = min( len( ask_ords ), nasks )
                     asks = []
-                    asks.append(bbo['ask'])
-
-                    asks.append(bbo['ask'])
+                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                    
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
                 else:
                     asks = []
                     len_ask_ords = 0
@@ -1141,12 +1235,17 @@ class MarketMaker( object ):
 
             # # in profit, 100% pos or skew
             elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_bids == False) and positionGains[fut] == True:
+                nasks = 0
+                place_asks = False
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
                     
-                    bids    = bbo['bids']
+                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
+                    
+                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+
                     bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
                 else:
                     bids = []
@@ -1166,34 +1265,38 @@ class MarketMaker( object ):
                     ask_ords = []
            
             # # at a loss, 100% pos or skew
-            elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_asks == False) and positionGains[fut] == False:
-                nbids = 0
-                place_bids = 0
-                if place_bids:
-                
-                    bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
-                    len_bid_ords    = min( len( bid_ords ), nbids )
-                    bids = []
-                    bids.append(bbo['bid'])
-
-                    bids.append(bbo['bid'])
-                else:
-                    bids = []
-                    len_bid_ords = 0
-                    bid_ords = []
-                if place_asks:
+            elif positionSkew == 'short' and positionGains[fut] == False:
+                if place_asks == False:
+                    nasks = 0
+                    place_asks = 0
+                if skewDirection == 'superlong' or skewDirection == 'long':
+                    if place_bids:
                     
-                    ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
-                    len_ask_ords    = min( len( ask_ords ), nasks )
-                    asks = []
-                    asks.append(bbo['ask'])
+                        bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
+                        len_bid_ords    = min( len( bid_ords ), nbids )
+                        bids = []
+                        bids.append(bbo['bid'])
 
-                    asks.append(bbo['ask'])
-                else:
-                    asks = []
-                    len_ask_ords = 0
-                    ask_ords = []
-                
+                        bids.append(bbo['bid'])
+                    else:
+                        bids = []
+                        len_bid_ords = 0
+                        bid_ords = []
+                    if place_asks:
+                        
+                        ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
+                        len_ask_ords    = min( len( ask_ords ), nasks )
+                        asks = []
+                        ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                        
+                        asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
+                        
+                        asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                    else:
+                        asks = []
+                        len_ask_ords = 0
+                        ask_ords = []
+                    
             # Short position in short skew
 
             
@@ -1204,11 +1307,10 @@ class MarketMaker( object ):
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
-                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
-                    
-                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+                    bids = []
+                    bids.append(bbo['bid'])
 
-                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                    bids.append(bbo['bid'])
                 else:
                     bids = []
                     len_bid_ords = 0
@@ -1247,10 +1349,7 @@ class MarketMaker( object ):
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
-                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
-                    
-                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
-
+                    bids    = bbo['bids']
                     bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
                 else:
                     bids = []
@@ -1274,16 +1373,15 @@ class MarketMaker( object ):
             # # in profit, >50%
 
             elif positionSkew == 'short' and ((skewDirection == 'supershort' or skewDirection == 'superlong') or  place_asks2 == False) and positionGains[fut] == True:
-                
+                bidMult = 1.25
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
-                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
-                    
-                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+                    bids = []
+                    bids.append(bbo['bid'])
 
-                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                    bids.append(bbo['bid'])
                 else:
                     bids = []
                     len_bid_ords = 0
@@ -1323,9 +1421,11 @@ class MarketMaker( object ):
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
                     len_ask_ords    = min( len( ask_ords ), nasks )
                     asks = []
-                    asks.append(bbo['ask'])
-
-                    asks.append(bbo['ask'])
+                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
+                    
+                    asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
+                    
+                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
                 else:
                     asks = []
                     len_ask_ords = 0
@@ -1335,15 +1435,15 @@ class MarketMaker( object ):
             elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_asks == False) and positionGains[fut] == True:
                 place_asks = 0
                 nasks = 0
+                bidMult = 1.25
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
-                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
-                    
-                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+                    bids = []
+                    bids.append(bbo['bid'])
 
-                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                    bids.append(bbo['bid'])
                 else:
                     bids = []
                     len_bid_ords = 0
@@ -1365,6 +1465,7 @@ class MarketMaker( object ):
             elif positionSkew == 'short' and ((skewDirection == 'superlong' or skewDirection == 'supershort') or place_asks == False) and positionGains[fut] == False:
                 nasks = 0
                 place_asks = 0
+                bidMult = 1.25
                 if place_bids:
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
