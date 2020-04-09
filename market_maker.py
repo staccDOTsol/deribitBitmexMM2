@@ -1397,9 +1397,6 @@ class MarketMaker( object ):
                 print('overPosLimit: ' + overPosLimit)
                 print('positionGains[fut]: ' + str(positionGains[fut]))
             #print(fut)
-            if place_bids2 == False     : 
-
-
             print('place')
             if place_asks == True:
                 len_ask_ords = 2
