@@ -50,9 +50,9 @@ URL     = 'https://www.deribit.com'
 BP                  = 1e-4      # one basis point
 BTC_SYMBOL          = 'btc'
 CONTRACT_SIZE       = 10        # USD
-COV_RETURN_CAP      = 1000       # cap on variance for vol estimate
+COV_RETURN_CAP      = 20       # cap on variance for vol estimate
 DECAY_POS_LIM       = 0.1       # position lim decay factor toward expiry
-EWMA_WGT_COV        = 76         # parameter in % points for EWMA volatility estimate
+EWMA_WGT_COV        = 4         # parameter in % points for EWMA volatility estimate
 EWMA_WGT_LOOPTIME   = 0.1       # parameter for EWMA looptime estimate
 FORECAST_RETURN_CAP = 100       # cap on returns for vol estimate
 LOG_LEVEL           = logging.INFO
@@ -813,11 +813,10 @@ class MarketMaker( object ):
                 
                     bid_ords        = [ o for o in ords if o[ 'direction' ] == 'buy'  ]
                     len_bid_ords    = min( len( bid_ords ), nbids )
-                    bid0            = mid_mkt * math.exp( -MKT_IMPACT )
-                    
-                    bids    = [ bid0 * riskfac ** -i for i in range( 1, nbids + 1 ) ]
+                    bids = []
+                    bids.append(bbo['bid'])
 
-                    bids[ 0 ]   = ticksize_floor( bids[ 0 ], tsz )
+                    bids.append(bbo['bid'])
                 else:
                     bids = []
                     len_bid_ords = 0
@@ -826,11 +825,10 @@ class MarketMaker( object ):
                     
                     ask_ords        = [ o for o in ords if o[ 'direction' ] == 'sell' ]    
                     len_ask_ords    = min( len( ask_ords ), nasks )
-                    ask0            = mid_mkt * math.exp(  MKT_IMPACT )
-                    
-                    asks    = [ ask0 * riskfac ** i for i in range( 1, nasks + 1 ) ]
-                    
-                    asks[ 0 ]   = ticksize_ceil( asks[ 0 ], tsz  )
+                    asks = []
+                    asks.append(bbo['ask'])
+
+                    asks.append(bbo['ask'])
                 else:
                     asks = []
                     len_ask_ords = 0
