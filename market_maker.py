@@ -95,6 +95,12 @@ class MarketMaker( object ):
         self.equity_btc_init    = None
         self.con_size           = float( CONTRACT_SIZE )
         self.client             = None
+        self.maxMaxDD = 20
+        self.minMaxDD = -8
+        self.seriesData = {}
+        self.seriesData[(datetime.strptime((date.today() - timedelta(days=1)).strftime('%Y-%m-%d'), '%Y-%m-%d'))] = 0
+            
+        self.startUsd
         self.IM = 0
         self.LEV = 0
         self.tradeids = []
@@ -1391,6 +1397,9 @@ class MarketMaker( object ):
                 print('overPosLimit: ' + overPosLimit)
                 print('positionGains[fut]: ' + str(positionGains[fut]))
             #print(fut)
+            if place_bids2 == False     : 
+
+
             print('place')
             if place_asks == True:
                 len_ask_ords = 2
@@ -1755,6 +1764,180 @@ class MarketMaker( object ):
     
     
     def update_status( self ):
+
+        gobreak = False
+        breakfor = 0
+        for k in self.vols.keys():
+            if self.vols[k] > 10:
+                gobreak = True
+                breakfor = 0.25
+                print('volatility high! taking 0.25hr break')
+            if self.vols[k] > 10:
+                gobreak = True
+                breakfor = 0.5
+                print('volatility high! taking 0.5hr break')
+            if self.vols[k] > 15:
+                gobreak = True
+                breakfor = 1
+                print('volatility high! taking 1hr break')
+
+        if gobreak == True:
+            self.update_positions()
+            self.client.cancelall()
+            positionSize = 0
+            positionPos = 0
+            for p in self.positions:
+                positionSize = positionSize + self.positions[p]['size']
+                if self.positions[p]['size'] < 0:
+                    positionPos = positionPos - self.positions[p]['size']
+                else:   
+                    positionPos = positionPos + self.positions[p]['size']
+            if positionSize > 0:
+                selling = True
+                size = positionSize
+            else:
+                selling = False
+                size = positionSize * -1
+            print('positionSize: ' + str(positionSize))
+            size = size / len(self.client.positions())
+            print('size: ' + str(size))
+            try:
+                for p in self.client.positions():
+                    sleep(0.01)
+
+                    bbo     = self.get_bbo( p['instrument'] )
+                    bid_mkt = bbo[ 'bid' ]
+                    ask_mkt = bbo[ 'ask' ]
+                    mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
+                    if selling:
+
+                        if 'ETH' in p['instrument']:
+                            self.client.sell(  p['instrument'], size, mid * 0.98, 'false' )
+                        else:
+                            self.client.sell(  p['instrument'], size, mid  * 0.98, 'false' )
+
+                    else:
+
+                        if 'ETH' in p['instrument']:
+                            self.client.buy(  p['instrument'], size, mid * 1.02, 'false' )
+                        else:
+                            self.client.buy(  p['instrument'], size, mid * 1.02, 'false' )
+            except Exception as e:
+                print(e)
+            self.predict_5 = 0.5
+            self.predict_1 = 0.5
+            self.vols               = OrderedDict()
+            sleep(60 * 60 * breakfor)
+
+        if self.startUsd != 0:
+            startUsd = self.startUsd + self.startUsd2 
+            nowUsd = self.equity_usd + self.equity_usd2
+           
+            
+
+
+            diff = 100 * ((nowUsd / startUsd) -1)
+            #print('diff')
+            #print(diff)
+            
+            if diff < self.diff2:
+                self.diff2 = diff
+            if diff > self.diff3:
+                self.diff3 = diff
+            print('self diff2 : ' +str(self.diff2))
+            print('self diff3 : ' +str(self.diff3))
+            positionSize = 0
+            for p in self.positions:
+                positionSize = positionSize + self.positions[p]['size']
+                if self.positions[p]['size'] > 0:
+                    skewingpos = skewingpos + 1
+                elif self.positions[p]['size'] < 0:
+                    skewingneg = skewingneg + 1
+            if self.diff3 > self.maxMaxDD and self.diff3 != 0:
+                print('broke max max dd! sleep 24hr')
+                self.client.cancelall()
+                
+                if positionSize > 0:
+                    selling = True
+                    size = positionSize
+                else:
+                    selling = False
+                    size = positionSize * -1
+                print('size: ' + str(size))
+                try:
+                    for p in self.client.positions():
+                        sleep(0.01)
+
+                        bbo     = self.get_bbo( p['instrument'] )
+                        bid_mkt = bbo[ 'bid' ]
+                        ask_mkt = bbo[ 'ask' ]
+                        mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
+                        if selling:
+                            if 'ETH' in p['instrument']:
+                                self.client.sell(  p['instrument'], size, mid * 0.98, 'false' )
+                            else:
+                                self.client.sell(  p['instrument'], size, mid * 0.98, 'false' )
+
+                        else:
+                            if 'ETH' in p['instrument']:
+                                self.client.buy(  p['instrument'], size, mid * 1.02, 'false' )
+                            else:
+                                self.client.buy(  p['instrument'], size, mid * 1.02, 'false' )
+                    sleep(60 * 11)
+                except Exception as e:
+                    print(e)
+                time.sleep(60 * 60 * 24)
+
+                self.diff3 = 0
+                self.startUsd = self.equity_usd
+            if self.diff2 < self.minMaxDD and self.diff2 != 0:
+                print('broke min max dd! sleep 24hr')
+                self.client.cancelall()
+                
+                if positionSize > 0:
+                    selling = True
+                    size = positionSize
+                else:
+                    selling = False
+                    size = positionSize * -1
+                print('size: ' + str(size))
+                try:
+                    for p in self.client.positions():
+                        sleep(0.01)
+
+                        bbo     = self.get_bbo( p['instrument'] )
+                        bid_mkt = bbo[ 'bid' ]
+                        ask_mkt = bbo[ 'ask' ]
+                        mid = 0.5 * ( bbo[ 'bid' ] + bbo[ 'ask' ] )
+                        if selling:
+                            if 'ETH' in p['instrument']:
+                                self.client.sell(  p['instrument'], size, mid * 0.98, 'false' )
+                            else:
+                                self.client.sell(  p['instrument'], size, mid * 0.98, 'false' )
+
+                        else:
+                            if 'ETH' in p['instrument']:
+                                self.client.buy(  p['instrument'], size, mid * 1.02, 'false' )
+                            else:
+                                self.client.buy(  p['instrument'], size, mid * 1.02, 'false' )
+                    sleep(60 * 11)
+                except Exception as e:
+                    print(e)
+                time.sleep(60 * 60 * 24)
+                self.diff2 = 0
+                self.startUsd = self.equity_usd
+            self.seriesData[(datetime.strptime(datetime.today().strftime('%Y-%m-%d'), '%Y-%m-%d'))] = self.diff2
+            
+            endLen = (len(self.seriesData))
+            if endLen != startLen:
+                self.seriesPercent[(datetime.strptime(datetime.today().strftime('%Y-%m-%d'), '%Y-%m-%d'))] = diff
+                self.diff2 = 0
+                self.diff3 = 0
+                self.startUsd = self.equity_usd
+            s = pd.Series(self.seriesData)
+
+
+      
         try:
             if self.equity_btc_init != 0:
                 for fut in self.futures.keys():
