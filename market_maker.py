@@ -43,8 +43,8 @@ parser.add_argument( '--no-restart',
 
 args    = parser.parse_args()
 
-KEY     = "Ef30Pt3-"#"VC4d7Pj1"
-SECRET  = "TdREcHubAr4cPh-WwifNI0Y1iGdq3YjedsO-8ct-Fhw"#"IB4VEP26OzTNUt4JhNILOW9aDuzctbGs_K6izxQG2dI"
+KEY     = 
+SECRET  = 
 URL     = 'https://www.deribit.com'
 
         
